@@ -13,7 +13,7 @@ from weft.assets import DEFAULT_STYLE, generate_images, load_style
 from weft.compiler import compile_render_plan
 from weft.exporters.capcut_draft import build_capcut_draft
 from weft.parser import parse_conti
-from weft.picker.server import _save_pick
+from weft.picker.server import _generate_and_pick, _save_pick
 from weft.validate import validate_project
 from weft.writer import write_project
 
@@ -323,6 +323,42 @@ class DryRunTest(unittest.TestCase):
             self.assertEqual(["candidate_001.png"], r["new"])
             visuals = json.loads((root / "VISUALS.json").read_text(encoding="utf-8"))
             self.assertEqual("NEW subject", visuals["shots"][0]["prompt"])  # and persisted it
+
+    def test_picker_generate_auto_picks_new_candidate(self) -> None:
+        captured: dict[str, str] = {}
+
+        class FakeImageProvider:
+            def __init__(self, **_kwargs) -> None:
+                pass
+
+            def cache_key(self, _prompt: str) -> str:
+                return "k"
+
+            def generate(self, prompt: str, n: int = 2) -> list[bytes]:
+                captured["prompt"] = prompt
+                return [b"png" for _ in range(n)]
+
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {"OPENAI_API_KEY": "test"}, clear=False):
+            root = Path(tmp)
+            (root / "VISUALS.json").write_text(
+                json.dumps({"schema": "weft-visual-v1",
+                            "shots": [{"id": "s01", "source_kind": "image", "prompt": "OLD subject"}]}),
+                encoding="utf-8",
+            )
+            (root / "PICKS.json").write_text(
+                json.dumps({"schema": "weft-picks-v1",
+                            "selections": {"s01": "images/openai/candidate_000.png"},
+                            "auto_picked": [], "overridden": ["s01"]}),
+                encoding="utf-8",
+            )
+
+            with patch("weft.assets.OpenAIImage", FakeImageProvider):
+                result = _generate_and_pick(root, "s01", n=1, prompt="NEW subject")
+
+            self.assertIn("NEW subject", captured["prompt"])
+            self.assertEqual("candidate_001.png", result["pick"])
+            picks = json.loads((root / "PICKS.json").read_text(encoding="utf-8"))
+            self.assertEqual("images/openai/candidate_001.png", picks["selections"]["s01"])
 
 
 if __name__ == "__main__":

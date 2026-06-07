@@ -88,6 +88,14 @@ def _save_prompt(project_dir: Path, shot_id: str, prompt: str) -> None:
     _sync_shot_prompt(project_dir, shot_id, prompt)
 
 
+def _generate_and_pick(project_dir: Path, shot_id: str, n: int, prompt: str | None) -> dict:
+    result = append_candidates(project_dir, shot_id, n=n, prompt=prompt)
+    if result["new"]:
+        _save_pick(project_dir, shot_id, result["new"][0])
+        result["pick"] = result["new"][0]
+    return result
+
+
 def _add_external(project_dir: Path, shot_id: str, data: bytes) -> str:
     from PIL import Image
     import io
@@ -169,9 +177,10 @@ def _make_handler(project_dir: Path):
                     self._json(200, {"ok": True}); return
                 if path == "/api/generate":
                     b = self._read_json()
-                    r = append_candidates(project_dir, b["shot_id"], n=int(b.get("n", 1)),
-                                          prompt=(b.get("prompt") or None))
+                    r = _generate_and_pick(project_dir, b["shot_id"], n=int(b.get("n", 1)),
+                                           prompt=(b.get("prompt") or None))
                     self._json(200, {"ok": True, "new": r["new"],
+                                     "pick": r.get("pick"),
                                      "candidates": _candidates(project_dir, b["shot_id"])}); return
                 if path == "/api/external":
                     b = self._read_json()

@@ -43,6 +43,7 @@
   textarea:focus{border-color:#2a4d7a}
   .prompt-actions{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap}
   .ext{margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .ext-label{color:#777;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
   .dropzone{border:1.5px dashed #3a3a3a;border-radius:6px;padding:8px 14px;color:#888;font-size:12px;cursor:pointer}
   .dropzone.over{border-color:#4ade80;color:#4ade80;background:#0f2417}
   .images{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
@@ -148,8 +149,10 @@ function go(i){
       <span style="color:#666;font-size:12px">⌘/Ctrl+Enter = 이 프롬프트로 생성 (또는 + 생성)</span>
     </div>
     <div class="ext">
-      <span class="dropzone" id="drop">⬇ 외부 이미지 드롭 / 클릭</span>
-      <input type="text" id="extpath" placeholder="또는 파일 경로 붙여넣기 (Enter)" style="flex:1;min-width:180px">
+      <span class="ext-label">외부 이미지</span>
+      <span class="dropzone" id="drop">⬇ 파일 드롭 / 클릭</span>
+      <span class="ext-label">파일 경로</span>
+      <input type="text" id="extpath" placeholder="이미지 파일 경로만 (프롬프트 아님)" style="flex:1;min-width:180px">
       <input type="file" id="extfile" accept="image/*" style="display:none">
     </div>`;
   const ta=$('prompt');
@@ -183,18 +186,20 @@ async function pick(f){
 }
 function moveCur(d){const s=S.shots[S.idx];if(!s.candidates.length)return;S.cur=Math.max(0,Math.min(s.candidates.length-1,S.cur+d));updateClasses();}
 async function savePrompt(){
+  if(misplacedExternalText())return;
   const s=S.shots[S.idx], p=$('prompt').value.trim();
   await fetch('/api/prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shot_id:s.shot_id,prompt:p})});
   s.prompt=p; toast('💾 프롬프트 저장됨');
 }
 async function generate(){
+  if(misplacedExternalText())return;
   const s=S.shots[S.idx]; if(S.busy)return; S.busy=true; overlay(true,`${s.shot_id} 생성 중…`); $('gen-btn').disabled=true;
   try{
     const n=+$('n-select').value, p=$('prompt')?$('prompt').value.trim():'';
     const r=await (await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shot_id:s.shot_id,n,prompt:p})})).json();
     if(!r.ok)throw new Error(r.error);
-    s.prompt=p; s.candidates=r.candidates; S.cur=s.candidates.indexOf(r.new[0]); renderCards(); renderSidebar();
-    toast(`✓ 생성 ${r.new.join(', ')}`);
+    s.prompt=p; s.candidates=r.candidates; s.pick=r.pick||r.new[0]||s.pick; S.cur=s.candidates.indexOf(s.pick); renderCards(); renderSidebar();
+    toast(`✓ 생성+선택 ${r.new.join(', ')}`);
   }catch(e){toast('생성 실패: '+e.message,'err');}
   finally{S.busy=false;overlay(false);$('gen-btn').disabled=false;}
 }
@@ -205,7 +210,15 @@ function setupExternal(){
   dz.ondragover=e=>{e.preventDefault();dz.classList.add('over');};
   dz.ondragleave=()=>dz.classList.remove('over');
   dz.ondrop=e=>{e.preventDefault();dz.classList.remove('over');const f=e.dataTransfer.files[0];if(f)readExt(f);};
-  pathIn.onkeydown=e=>{if(e.key==='Enter'&&pathIn.value.trim())addExt({path:pathIn.value.trim()});};
+  pathIn.onkeydown=e=>{if(e.key==='Enter'&&pathIn.value.trim()){if(misplacedExternalText())return;addExt({path:pathIn.value.trim()});}};
+}
+function looksLikeImagePath(v){return /^(~|\/|\.\/|\.\.\/|file:)/.test(v)||/\.(png|jpe?g|webp|gif|svg)$/i.test(v);}
+function misplacedExternalText(){
+  const el=$('extpath'); if(!el)return false;
+  const v=el.value.trim(); if(!v||looksLikeImagePath(v))return false;
+  toast('아래 칸은 외부 이미지 파일 경로입니다. 프롬프트는 위 큰 박스에 입력하세요.','warn');
+  el.focus();
+  return true;
 }
 function readExt(f){const r=new FileReader();r.onload=()=>addExt({data:r.result});r.readAsDataURL(f);}
 async function addExt(payload){
