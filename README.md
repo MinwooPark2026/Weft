@@ -19,6 +19,7 @@ Weft는 긴 호흡의 설명형 영상을 위한 **이중 트랙(dual-track) 워
 
 ### 구성 요소
 
+- `install.sh`: 설치 스크립트 (venv 생성, `weft` 명령 설치, `.env` 시드)
 - `weft/`: 파이썬 CLI와 핵심 파이프라인
 - `.claude/skills/script-to-conti/`: 대본을 Weft 이중 트랙 `CONTI.md`로 바꾸는 스킬
 - `weft/picker/`: 로컬 이미지 후보 선택기(picker)
@@ -28,58 +29,68 @@ Weft는 긴 호흡의 설명형 영상을 위한 **이중 트랙(dual-track) 워
 
 생성물(오디오·이미지·CapCut 드래프트)은 로컬에서 만들어지며 저장소에 커밋되지 않습니다.
 
-### 설치
+### 설치 (최초 1회)
+
+저장소 안에서 한 번만 실행하세요:
 
 ```bash
-./run.sh setup
-cp .env.example .env
+./install.sh
 ```
 
-`.env`에 본인 키를 채우세요:
+`install.sh`는 venv를 만들고 패키지를 editable로 설치(`weft` 명령 생성)한 뒤 `~/.local/bin`에 심볼릭 링크하고 `.env.example`로부터 `.env`를 시드합니다. 그다음부터 `weft`는 **어느 디렉터리에서나** 동작합니다.
+
+설치 후 저장소의 `.env`에 본인 키를 채우세요:
 
 - TTS용 `TYPECAST_API_KEY`, `TYPECAST_VOICE`
 - 이미지 생성용 `OPENAI_API_KEY`
 
+editable 설치라서 weft는 어느 작업 디렉터리에서든 이 `.env`를 찾습니다. 현재 폴더에 둔 프로젝트별 `.env`도 인식됩니다.
+
 ### 빠른 시작
 
+프로젝트는 `CONTI.md`가 들어 있는 폴더입니다. 그 폴더로 `cd`한 뒤, 현재 디렉터리를 대상으로 동작하는 하위 명령을 실행하세요(경로 인자 불필요):
+
 ```bash
-./run.sh conti
-./run.sh tts
-./run.sh images
-./run.sh pick
-./run.sh capcut
+cd my-video       # CONTI.md가 있는 폴더
+weft conti        # ./CONTI.md -> ./generated_project/ (파싱 + 검증 + 컴파일)
+weft tts          # ./generated_project (Typecast 나레이션; API 비용)
+weft images       # ./generated_project (OpenAI gpt-image-1; API 비용)
+weft pick         # ./generated_project (로컬 브라우저 picker, 왼손 단축키)
+weft capcut       # ./generated_project -> CapCut 드래프트 (CapCut 종료 후 실행)
 ```
 
-동등한 직접 실행 명령:
+한 번에:
 
 ```bash
-python3 -m unittest discover -s tests
-python3 -m weft.cli validate example/CONTI.md
-python3 -m weft.cli dryrun example/CONTI.md --out example/generated_project
+weft all          # conti -> tts -> images -> capcut
 ```
 
 ### 프로젝트 명령
 
+`CONTI.md`가 있는 폴더 안에서 실행하세요:
+
 ```bash
-./run.sh conti            # CONTI.md -> JSON 트랙·픽·SRT·렌더 플랜
-./run.sh tts              # Typecast 나레이션 WAV
-./run.sh images           # OpenAI 이미지 후보
-./run.sh pick             # 로컬 브라우저 picker
-./run.sh capcut           # CapCut 드래프트 빌더
-./run.sh all              # conti -> tts -> images -> capcut
+weft conti            # ./CONTI.md -> JSON 트랙·픽·SRT·렌더 플랜
+weft tts              # Typecast 나레이션 WAV
+weft images           # OpenAI 이미지 후보
+weft pick             # 로컬 브라우저 picker
+weft capcut           # CapCut 드래프트 빌더
+weft all              # conti -> tts -> images -> capcut
 ```
 
-다른 프로젝트 폴더 사용:
+conti의 입력은 기본값이 `./CONTI.md`, tts/images/pick/capcut의 프로젝트 디렉터리는 기본값이 `./generated_project`입니다. 파워 유저는 경로를 명시적으로 넘길 수도 있습니다.
+
+다른 프로젝트 폴더 사용 — 그냥 그 폴더로 `cd`하세요:
 
 ```bash
-PROJECT=ep3 ./run.sh all
-./run.sh all ep3
+cd that-folder
+weft all
 ```
 
 이미지 후보 개수 지정:
 
 ```bash
-N=3 ./run.sh images
+weft images --n 3
 ```
 
 ### Script-To-Conti 스킬
@@ -94,10 +105,10 @@ AI 어시스턴트로 대본을 Weft `CONTI.md`로 변환하고 싶을 때 `.cla
 - 모션 메모
 - 자막
 
-그다음 실행:
+그다음 프로젝트 폴더 안에서 실행:
 
 ```bash
-./run.sh conti <project>
+weft conti
 ```
 
 ### 이미지 스타일
@@ -108,15 +119,15 @@ AI 어시스턴트로 대본을 Weft `CONTI.md`로 변환하고 싶을 때 `.cla
 샷별 프롬프트 + 공유 Style 접미사
 ```
 
-`STYLE.txt` 파일을 작성하면 공유 스타일을 덮어쓸 수 있습니다:
+프로젝트 폴더(`CONTI.md` 옆)에 `STYLE.txt` 파일을 두면 공유 스타일을 덮어쓸 수 있습니다:
 
-- `<project>/generated_project/STYLE.txt`
-- 또는 `<project>/STYLE.txt`
+- `STYLE.txt` (프로젝트 폴더, `CONTI.md` 옆)
+- 또는 `generated_project/STYLE.txt`
 
-그다음 이미지를 다시 생성:
+기본값은 `weft/assets.py`의 `DEFAULT_STYLE`입니다. 그다음 프로젝트 폴더 안에서 이미지를 다시 생성:
 
 ```bash
-./run.sh images <project>
+weft images
 ```
 
 템플릿과 예시는 `STYLE_GUIDE.md`를 참고하세요.
@@ -148,6 +159,7 @@ This lets one visual cover multiple narration beats, or one narration beat use s
 
 ### Included Tools
 
+- `install.sh`: installer (creates venv, installs the `weft` command, seeds `.env`)
 - `weft/`: Python CLI and core pipeline
 - `.claude/skills/script-to-conti/`: skill for turning a script into a Weft dual-track `CONTI.md`
 - `weft/picker/`: local image candidate picker
@@ -157,58 +169,68 @@ This lets one visual cover multiple narration beats, or one narration beat use s
 
 Generated media (audio, images, CapCut drafts) is produced locally and is not committed.
 
-### Setup
+### Setup (once)
+
+Run this once inside the repo:
 
 ```bash
-./run.sh setup
-cp .env.example .env
+./install.sh
 ```
 
-Fill `.env` with your own keys:
+`install.sh` creates a venv, editable-installs the package (creating the `weft` command), symlinks it into `~/.local/bin`, and seeds `.env` from `.env.example`. After that, `weft` works from **any directory**.
+
+Then fill the repo's `.env` with your own keys:
 
 - `TYPECAST_API_KEY`, `TYPECAST_VOICE` for TTS
 - `OPENAI_API_KEY` for image generation
 
+Because the install is editable, weft finds this `.env` from any working directory. A per-project `.env` in the current folder also works.
+
 ### Quick Start
 
+A project is a folder containing `CONTI.md`. `cd` into it and run subcommands that operate on the current directory (no path args needed):
+
 ```bash
-./run.sh conti
-./run.sh tts
-./run.sh images
-./run.sh pick
-./run.sh capcut
+cd my-video       # folder containing CONTI.md
+weft conti        # ./CONTI.md -> ./generated_project/ (parse + validate + compile)
+weft tts          # ./generated_project (Typecast narration; API cost)
+weft images       # ./generated_project (OpenAI gpt-image-1; API cost)
+weft pick         # ./generated_project (local browser picker, left-hand shortcuts)
+weft capcut       # ./generated_project -> CapCut draft (run with CapCut closed)
 ```
 
-Equivalent direct commands:
+One shot:
 
 ```bash
-python3 -m unittest discover -s tests
-python3 -m weft.cli validate example/CONTI.md
-python3 -m weft.cli dryrun example/CONTI.md --out example/generated_project
+weft all          # conti -> tts -> images -> capcut
 ```
 
 ### Project Commands
 
+Run these inside the folder that contains `CONTI.md`:
+
 ```bash
-./run.sh conti            # CONTI.md -> JSON tracks, picks, SRT, render plan
-./run.sh tts              # Typecast narration WAVs
-./run.sh images           # OpenAI image candidates
-./run.sh pick             # local browser picker
-./run.sh capcut           # CapCut draft builder
-./run.sh all              # conti -> tts -> images -> capcut
+weft conti            # ./CONTI.md -> JSON tracks, picks, SRT, render plan
+weft tts              # Typecast narration WAVs
+weft images           # OpenAI image candidates
+weft pick             # local browser picker
+weft capcut           # CapCut draft builder
+weft all              # conti -> tts -> images -> capcut
 ```
 
-Use another project folder:
+conti's CONTI source defaults to `./CONTI.md`; tts/images/pick/capcut default their project dir to `./generated_project`. Power users can still pass paths explicitly.
+
+Use another project folder — just `cd` into it:
 
 ```bash
-PROJECT=ep3 ./run.sh all
-./run.sh all ep3
+cd that-folder
+weft all
 ```
 
 Set image candidate count:
 
 ```bash
-N=3 ./run.sh images
+weft images --n 3
 ```
 
 ### Script-To-Conti Skill
@@ -223,10 +245,10 @@ The skill outputs:
 - motion notes
 - subtitles
 
-Then run:
+Then, from inside the project folder, run:
 
 ```bash
-./run.sh conti <project>
+weft conti
 ```
 
 ### Image Style
@@ -237,15 +259,15 @@ Every generated image receives:
 shot-specific prompt + shared Style suffix
 ```
 
-Override the shared style by writing a `STYLE.txt` file:
+Override the shared style by placing a `STYLE.txt` file in the project folder (next to `CONTI.md`):
 
-- `<project>/generated_project/STYLE.txt`
-- or `<project>/STYLE.txt`
+- `STYLE.txt` (in the project folder, next to `CONTI.md`)
+- or `generated_project/STYLE.txt`
 
-Then regenerate images:
+The built-in default is `DEFAULT_STYLE` in `weft/assets.py`. Then, from inside the project folder, regenerate images:
 
 ```bash
-./run.sh images <project>
+weft images
 ```
 
 See `STYLE_GUIDE.md` for templates and examples.

@@ -9,24 +9,42 @@ from .parser import parse_conti
 from .validate import validate_project
 from .writer import write_project
 
+DEFAULT_CONTI = "CONTI.md"
+DEFAULT_PROJECT = "generated_project"
+
+
+def _missing_conti(path: str) -> str | None:
+    if Path(path).is_file():
+        return None
+    return (
+        f"'{path}' 가 없습니다. CONTI.md 가 있는 프로젝트 폴더에서 실행하거나 "
+        f"경로를 인자로 주세요 (예: weft conti path/to/CONTI.md)."
+    )
+
+
+def _missing_project(path: str) -> str | None:
+    if Path(path).is_dir():
+        return None
+    return f"'{path}' 폴더가 없습니다. 먼저 'weft conti' 로 프로젝트를 생성하세요."
+
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="weft", description="Weft dual-track dry-run CLI")
+    parser = argparse.ArgumentParser(prog="weft", description="Weft — dual-track explainer video toolchain")
     sub = parser.add_subparsers(dest="command", required=True)
 
     parse_cmd = sub.add_parser("parse", help="Parse CONTI.md and print project JSON")
-    parse_cmd.add_argument("conti")
+    parse_cmd.add_argument("conti", nargs="?", default=DEFAULT_CONTI)
 
     validate_cmd = sub.add_parser("validate", help="Parse and validate CONTI.md")
-    validate_cmd.add_argument("conti")
+    validate_cmd.add_argument("conti", nargs="?", default=DEFAULT_CONTI)
 
-    dryrun_cmd = sub.add_parser("dryrun", help="Generate a dry-run Weft project")
-    dryrun_cmd.add_argument("conti")
-    dryrun_cmd.add_argument("--out", required=True)
-    dryrun_cmd.add_argument("--no-assets", action="store_true", help="Do not materialize placeholder SVG assets")
+    conti_cmd = sub.add_parser("conti", aliases=["dryrun"], help="Build a project from CONTI.md (parse/validate/compile)")
+    conti_cmd.add_argument("conti", nargs="?", default=DEFAULT_CONTI)
+    conti_cmd.add_argument("--out", default=DEFAULT_PROJECT, help="output project dir (default ./generated_project)")
+    conti_cmd.add_argument("--no-assets", action="store_true", help="Do not materialize placeholder SVG assets")
 
-    tts_cmd = sub.add_parser("tts", help="Synthesize narration audio (Typecast) into a project dir")
-    tts_cmd.add_argument("project_dir")
+    tts_cmd = sub.add_parser("tts", help="Synthesize narration audio (Typecast) into the project dir")
+    tts_cmd.add_argument("project_dir", nargs="?", default=DEFAULT_PROJECT)
     tts_cmd.add_argument("--voice", help="voice_id override (default from .env TYPECAST_VOICE)")
     tts_cmd.add_argument("--limit", type=int, help="only the first N voice beats (smoke test)")
     tts_cmd.add_argument("--beats", help="comma-separated beat ids to (re)generate")
@@ -34,8 +52,8 @@ def main(argv: list[str] | None = None) -> int:
     tts_cmd.add_argument("--no-recompile", action="store_true", help="skip recompiling exports")
     tts_cmd.add_argument("--allow-partial", action="store_true", help="return success even if some beats fail")
 
-    img_cmd = sub.add_parser("images", help="Generate shot images (OpenAI gpt-image-1) into a project dir")
-    img_cmd.add_argument("project_dir")
+    img_cmd = sub.add_parser("images", help="Generate shot images (OpenAI gpt-image-1) into the project dir")
+    img_cmd.add_argument("project_dir", nargs="?", default=DEFAULT_PROJECT)
     img_cmd.add_argument("--limit", type=int, help="only the first N image shots (smoke test)")
     img_cmd.add_argument("--shots", help="comma-separated shot ids to (re)generate")
     img_cmd.add_argument("--n", type=int, help="candidates per shot (default .env IMAGE_CANDIDATES_N)")
@@ -47,8 +65,8 @@ def main(argv: list[str] | None = None) -> int:
     img_cmd.add_argument("--allow-partial", action="store_true", help="return success even if some shots fail")
 
     cap_cmd = sub.add_parser("capcut", help="Build a CapCut draft from a project's render_plan")
-    cap_cmd.add_argument("project_dir")
-    cap_cmd.add_argument("--folder", default="weft_ep2", help="CapCut draft folder name")
+    cap_cmd.add_argument("project_dir", nargs="?", default=DEFAULT_PROJECT)
+    cap_cmd.add_argument("--folder", default=None, help="CapCut draft folder name (default weft_<project folder>)")
     cap_cmd.add_argument("--capcut-root", help="CapCut Projects/com.lveditor.draft path override")
     cap_cmd.add_argument("--no-motion", action="store_true", help="place clips static (no keyframes)")
     cap_cmd.add_argument("--no-audio", action="store_true", help="skip audio track")
@@ -57,21 +75,40 @@ def main(argv: list[str] | None = None) -> int:
     cap_cmd.add_argument("--no-register", action="store_true", help="do not touch root_meta_info.json")
 
     pick_cmd = sub.add_parser("pick", help="Launch the image-candidate picker UI (local browser)")
-    pick_cmd.add_argument("project_dir")
+    pick_cmd.add_argument("project_dir", nargs="?", default=DEFAULT_PROJECT)
     pick_cmd.add_argument("--port", type=int, default=8770)
     pick_cmd.add_argument("--no-browser", action="store_true")
 
+    all_cmd = sub.add_parser("all", help="conti -> tts -> images -> capcut (TTS/이미지 API 비용 발생)")
+    all_cmd.add_argument("conti", nargs="?", default=DEFAULT_CONTI)
+    all_cmd.add_argument("--out", default=DEFAULT_PROJECT)
+    all_cmd.add_argument("--n", type=int, help="image candidates per shot")
+    all_cmd.add_argument("--folder", default=None, help="CapCut draft folder name (default weft_<project folder>)")
+
     args = parser.parse_args(argv)
+
     if args.command == "parse":
+        msg = _missing_conti(args.conti)
+        if msg:
+            print(msg, file=sys.stderr)
+            return 2
         project = parse_conti(args.conti)
         print(json.dumps(project, ensure_ascii=False, indent=2))
         return 0
     if args.command == "validate":
+        msg = _missing_conti(args.conti)
+        if msg:
+            print(msg, file=sys.stderr)
+            return 2
         project = parse_conti(args.conti)
         violations = validate_project(project)
         print(json.dumps(violations, ensure_ascii=False, indent=2))
         return 1 if any(item["severity"] == "error" for item in violations) else 0
-    if args.command == "dryrun":
+    if args.command == "conti":  # argparse maps the `dryrun` alias to this too
+        msg = _missing_conti(args.conti)
+        if msg:
+            print(msg, file=sys.stderr)
+            return 2
         project = parse_conti(args.conti)
         result = write_project(project, Path(args.out), materialize_assets=not args.no_assets)
         errors = [item for item in result["violations"] if item["severity"] == "error"]
@@ -82,6 +119,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"total_seconds={result['render_plan']['total_seconds']:.3f}")
         return 1 if errors else 0
     if args.command == "tts":
+        msg = _missing_project(args.project_dir)
+        if msg:
+            print(msg, file=sys.stderr)
+            return 2
         from .assets import generate_tts
 
         def _progress(i: int, total: int, beat_id: str, status: str, dur: float) -> None:
@@ -101,6 +142,10 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(summary, ensure_ascii=False))
         return 1 if summary.get("failed") and not args.allow_partial else 0
     if args.command == "images":
+        msg = _missing_project(args.project_dir)
+        if msg:
+            print(msg, file=sys.stderr)
+            return 2
         from .assets import generate_images
 
         def _progress(i: int, total: int, shot_id: str, status: str, _dur: float) -> None:
@@ -123,11 +168,16 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(summary, ensure_ascii=False))
         return 1 if summary.get("failed") and not args.allow_partial else 0
     if args.command == "capcut":
+        msg = _missing_project(args.project_dir)
+        if msg:
+            print(msg, file=sys.stderr)
+            return 2
         from .exporters.capcut_draft import build_capcut_draft
 
+        folder = args.folder or f"weft_{Path.cwd().name}"
         summary = build_capcut_draft(
             args.project_dir,
-            folder_name=args.folder,
+            folder_name=folder,
             capcut_root=args.capcut_root,
             with_motion=not args.no_motion,
             with_audio=not args.no_audio,
@@ -138,9 +188,37 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(summary, ensure_ascii=False))
         return 0
     if args.command == "pick":
+        msg = _missing_project(args.project_dir)
+        if msg:
+            print(msg, file=sys.stderr)
+            return 2
         from .picker.server import serve
 
         serve(args.project_dir, port=args.port, open_browser=not args.no_browser)
+        return 0
+    if args.command == "all":
+        msg = _missing_conti(args.conti)
+        if msg:
+            print(msg, file=sys.stderr)
+            return 2
+        from .assets import generate_images, generate_tts
+        from .exporters.capcut_draft import build_capcut_draft
+
+        project = parse_conti(args.conti)
+        result = write_project(project, Path(args.out), materialize_assets=True)
+        errors = [item for item in result["violations"] if item["severity"] == "error"]
+        if errors:
+            print(f"validation_errors={len(errors)} — 콘티를 고친 뒤 다시 실행하세요.", file=sys.stderr)
+            return 1
+        print(f"✓ conti → {args.out}")
+        generate_tts(args.out)
+        print("✓ tts")
+        generate_images(args.out, n=args.n)
+        print("✓ images")
+        folder = args.folder or f"weft_{Path.cwd().name}"
+        build_capcut_draft(args.out, folder_name=folder)
+        print(f"✓ capcut → {folder}")
+        print("후보를 직접 고르려면:  weft pick")
         return 0
     return 2
 

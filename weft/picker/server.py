@@ -195,9 +195,11 @@ def _make_handler(project_dir: Path):
                     from ..exporters.capcut_draft import build_capcut_draft
                     recompile_exports(project_dir)
                     running = _capcut_running()
-                    res = build_capcut_draft(project_dir, folder_name="weft_ep2",
+                    folder = f"weft_{project_dir.parent.name}"
+                    res = build_capcut_draft(project_dir, folder_name=folder,
                                              register=not running)
                     res["capcut_running"] = running
+                    res["folder"] = folder
                     self._json(200, {"ok": True, **res}); return
                 self.send_error(404)
             except Exception as e:

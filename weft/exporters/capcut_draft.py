@@ -303,7 +303,7 @@ def _img_dims(path: str) -> tuple[int, int]:
 def build_capcut_draft(
     project_dir: str | Path,
     *,
-    folder_name: str = "weft_ep2",
+    folder_name: str = "weft_draft",
     capcut_root: str | Path | None = None,
     with_motion: bool = True,
     with_audio: bool = True,

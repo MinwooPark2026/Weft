@@ -4,6 +4,7 @@
 __pycache__/
 *.pyc
 dist/
-example/generated_project/
-example/voice_samples/
+*.egg-info/
+generated_project/
+voice_samples/
 *.zip

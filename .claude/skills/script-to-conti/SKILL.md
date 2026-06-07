@@ -10,11 +10,11 @@ description: >-
 
 # script-to-conti — 대본을 Weft 이중 트랙 콘티로
 
-산문 대본 한 편을 **Weft 콘티 `CONTI.md`** 로 바꾼다. 이 콘티는 `weft.cli dryrun` 이
+산문 대본 한 편을 **Weft 콘티 `CONTI.md`** 로 바꾼다. 이 콘티는 `weft conti` 가
 바로 파싱하는 정본 입력이다.
 
 - **이 스킬 = 앞단**: 대본 → 비트 분할 + 시각 밀도 결정(▶/↓/▦/↺/⏸/❝) + shot별 영어 프롬프트.
-- **Weft 앱(CLI) = 뒷단**: `dryrun`(정본화·검증) → `tts`(나레이션) → `images`(생성) → `pick`(후보 선택) → `capcut`(드래프트).
+- **Weft 앱(CLI) = 뒷단**: `conti`(정본화·검증) → `tts`(나레이션) → `images`(생성) → `pick`(후보 선택) → `capcut`(드래프트).
 
 > ⚠️ 이건 **1:1(한 컷=한 이미지) 콘티가 아니라 이중 트랙 콘티**다. 한 행 = 한 컷이 아니라 **한 행 = 한 나레이션 비트**이고, 시각은 `시각(shot)` 칸으로 분리돼 여러 비트를 덮거나(홀드) 한 비트에 여러 장(몽타주)이 붙는다.
 
@@ -23,7 +23,7 @@ description: >-
 이 스킬 문서 하나로 콘티를 만들 수 있다(아래 §출력 형식에 표 스키마가 다 있음). 함께 보면 좋은 것:
 
 - **gold 예시**: [`example/CONTI.md`](../../../example/CONTI.md) — 검증 0 에러로 통과한 실제 콘티. 구조를 이걸로 모사한다.
-- [`STYLE_GUIDE.md`](../../../STYLE_GUIDE.md) — 이미지 일관성(스타일 바이블) 설정·교체. 모든 이미지 프롬프트가 상속할 `Style:` 문장은 여기서 정한다.
+- [`STYLE_GUIDE.md`](../../../STYLE_GUIDE.md) — 이미지 일관성 설정·교체. 모든 이미지 프롬프트가 상속할 `Style:` 문장은 여기서 정한다.
 
 ## 핵심 원칙
 
@@ -60,7 +60,7 @@ description: >-
 |---------|-------------|-------|------|-----------------|
 | s01_xxx | image | b001~b002 | zoom_in | An English image prompt describing only this shot's subject/composition |
 | s10_a | image | b003 | zoom_in | … |
-| s20_quote | text_card | b005 | fade | 한국어 문구: "핵심 인용" (CARDS.json 으로 렌더) |
+| s20_quote | text_card | b005 | fade | 한국어 문구: "핵심 인용" (generated_project/CARDS.json 으로 렌더) |
 ```
 
 - `source_kind`: `image`(생성) / `text_card`(타이포 카드) / `screen_element`(타이틀·엔딩) / `reuse`(→ id) / `stock_clip`.
@@ -74,20 +74,20 @@ description: >-
 
 ## 텍스트 카드 (❝) 처리
 
-`❝` shot의 실제 온스크린 문구는 `example/generated_project/CARDS.json` 에 `{shot_id: "문구\n여러 줄"}` 로 넣는다(빌드 시 Pillow가 한국어 타이포 PNG로 렌더). 콘티의 `자막`/`프롬프트 / 문구` 칸에 의도를 적어두고, CARDS.json에 최종 문구를 확정.
+`❝` shot의 실제 온스크린 문구는 `generated_project/CARDS.json` 에 `{shot_id: "문구\n여러 줄"}` 로 넣는다(빌드 시 Pillow가 한국어 타이포 PNG로 렌더). 콘티의 `자막`/`프롬프트 / 문구` 칸에 의도를 적어두고, CARDS.json에 최종 문구를 확정.
 
 ## 절차
 
-1. **입력 파악**: 대본 .md 경로 + 목표 길이 + 스타일 바이블(없으면 STYLE_BIBLE.md) + 출력 위치(`<project>/CONTI.md`).
+1. **입력 파악**: 대본 .md 경로 + 목표 길이 + 스타일(프로젝트 STYLE.txt, 없으면 내장 DEFAULT_STYLE — STYLE_GUIDE.md 참고) + 출력 위치(`<project>/CONTI.md`).
 2. **막 단위로 비트 분할 + 시각 밀도 결정**. 막마다 표로 보여주고 피드백 받아 고침.
 3. **shot별 영어 프롬프트 작성**(스타일 바이블 상속, 문자 금지).
 4. **팩트체크**: 숫자·연도·고유명사는 근거를 확인(예: 존재하지 않는 수치 인용 금지). 의심되면 표시.
 5. **CONTI.md 작성** → 검증:
    ```bash
-   ./run.sh conti <project>          # = python -m weft.cli dryrun <project>/CONTI.md --out <project>/generated_project
+   cd <project> && weft conti        # ./CONTI.md 를 읽어 ./generated_project 로 씀
    ```
    **검증 오류 0** 이어야 한다(partition 불변식: 모든 비트가 정확히 한 번 덮임). 오류 나면 `시각` 칸/표 스키마를 고친다.
-6. **다음**: `./run.sh tts` → `./run.sh images` → `./run.sh pick`(후보 선택) → `./run.sh capcut`.
+6. **다음**: `weft tts` → `weft images` → `weft pick`(후보 선택) → `weft capcut`.
 
 ## 톤
 
