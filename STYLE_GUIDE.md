@@ -73,7 +73,7 @@ Style: minimalist soft 3D clay render (claymation / plasticine look) — rounded
 
 ## 6. 더 고를 수 있는 스타일 (STYLE.txt에 붙여쓰기)
 
-원하는 걸 그대로 `STYLE.txt`에 넣으면 된다. (위 워크플로우가 설계·검증한 후보)
+원하는 걸 그대로 `STYLE.txt`에 넣으면 된다. (위 워크플로우가 설계·검증한 후보) 아래 스타일들(과 기본 3b1b·클레이)은 [`STYLE_GUIDE_assets/`](STYLE_GUIDE_assets/) 에 `<이름>.STYLE.txt` 로도 저장돼 있어, 복사해서 프로젝트의 `STYLE.txt`로 쓰면 된다 — 예: `cp STYLE_GUIDE_assets/papercut.STYLE.txt <project>/STYLE.txt`.
 
 <details><summary><b>페이퍼컷 콜라주</b> — 정겹고 손맛 있는 톤이 어울리는 교양·라이프·과학교양/그림책 느낌 인사이트 채널, 따뜻하고 친근하게 풀어내는 개념 설명 영상</summary>
 
