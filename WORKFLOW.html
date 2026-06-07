@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weft 워크플로우 — 대본에서 영상까지</title>
+<style>
+  :root{
+    --cream:#faf6ee; --card:#fffdf8; --ink:#2f2a22; --muted:#7c7567;
+    --amber:#d98b3a; --terra:#c4632f; --teal:#2f7e7e; --line:#e8dcc6;
+    --auto:#2f7e7e; --human:#c4632f; --ai:#6d5bd0;
+    --auto-bg:#e6f0ef; --human-bg:#f7e7df; --ai-bg:#ece9fb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--cream);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif;
+    line-height:1.6;padding:48px 20px 80px}
+  .wrap{max-width:1000px;margin:0 auto}
+  header{text-align:center;margin-bottom:14px}
+  h1{font-size:34px;margin:0 0 8px;letter-spacing:-.5px}
+  .sub{color:var(--muted);font-size:16px;margin:0}
+  .meta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:18px 0 30px}
+  .pill{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px}
+  .pill b{color:var(--terra)}
+  h2{font-size:20px;margin:44px 0 16px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+
+  .stage{position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 22px;margin:0 0 8px}
+  .stage .row{display:flex;align-items:flex-start;gap:16px}
+  .num{flex:0 0 auto;width:38px;height:38px;border-radius:10px;background:var(--cream);
+    border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:var(--terra)}
+  .body{flex:1;min-width:0}
+  .stage h3{margin:2px 0 4px;font-size:18px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .badge{font-size:11px;font-weight:700;border-radius:999px;padding:3px 10px;letter-spacing:.3px}
+  .b-auto{background:var(--auto-bg);color:var(--auto)}
+  .b-human{background:var(--human-bg);color:var(--human)}
+  .b-ai{background:var(--ai-bg);color:var(--ai)}
+  .tool{font-size:12px;color:var(--muted);border:1px dashed var(--line);border-radius:6px;padding:2px 8px}
+  .desc{margin:6px 0 10px;font-size:14.5px;color:#473f33}
+  .io{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px}
+  .io .lab{color:var(--muted);font-weight:600}
+  .chip{background:var(--cream);border:1px solid var(--line);border-radius:6px;padding:2px 8px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:#5a5346}
+  .arrow{color:var(--muted)}
+  .connector{height:18px;width:2px;background:var(--line);margin:0 auto}
+  .gate{border-left:4px solid var(--amber);background:#fdf3e3}
+  .aistage{border-left:4px solid var(--ai)}
+  .gatetag{display:inline-block;font-size:11px;font-weight:700;color:var(--amber);background:#fbe8cc;border-radius:999px;padding:2px 9px;margin-top:8px}
+  .aitag{display:inline-block;font-size:11px;font-weight:700;color:var(--ai);background:var(--ai-bg);border-radius:999px;padding:2px 9px;margin-top:8px}
+
+  .callout{border:2px solid var(--ai);border-radius:16px;background:var(--ai-bg);padding:20px 24px;margin:14px 0}
+  .callout.terra{border-color:var(--terra);background:#fdf1ea}
+  .callout h3{margin:0 0 10px;font-size:18px}
+  .callout.terra h3{color:var(--terra)} .callout h3{color:var(--ai)}
+  .callout ul{margin:8px 0 0;padding-left:20px}
+  .callout li{margin:5px 0;font-size:14.5px}
+  .status{display:inline-block;font-weight:700;border-radius:6px;padding:1px 8px;font-size:13px}
+  .s-skip{background:#f7e0d6;color:var(--terra)} .s-have{background:var(--auto-bg);color:var(--teal)}
+
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+  pre{background:#221d16;color:#f3ead7;border-radius:12px;padding:18px 20px;overflow:auto;font-size:13px;line-height:1.7;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre .c{color:#9b9384} pre .g{color:#7fb8a0} pre .v{color:#c4a0e0}
+  footer{text-align:center;color:var(--muted);font-size:12.5px;margin-top:40px}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  @media(max-width:680px){.twocol{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Weft 워크플로우</h1>
+  <p class="sub">대본 한 편 → 캡컷에서 열리는 영상까지. 자동 / 사람 / <b style="color:var(--ai)">AI</b>가 어디에 들어가나.</p>
+</header>
+
+<div class="meta">
+  <span class="pill">정보형 · 논문 설명 영상</span>
+  <span class="pill">샘플: <b>AI 논문 (AlexNet + Transformer)</b></span>
+  <span class="pill">길이 <b>9.2분</b></span>
+  <span class="pill">나레이션 92 · 이미지 44 · 카드 9 · 자막 93</span>
+</div>
+
+<div class="legend">
+  <span><b class="badge b-auto">AUTO</b> 자동(코드)</span>
+  <span><b class="badge b-human">사람</b> 사람의 판단</span>
+  <span><b class="badge b-ai">🤖 AI</b> LLM·생성 모델</span>
+  <span>🚪 <b style="color:var(--amber)">휴먼 터치 게이트</b></span>
+</div>
+
+<h2>① 파이프라인 (대본 → 영상)</h2>
+
+<!-- 0 -->
+<div class="stage gate aistage">
+  <div class="row"><div class="num">0</div><div class="body">
+    <h3>대본 작성 <span class="badge b-human">사람</span> <span class="badge b-ai">🤖 AI 보조</span> <span class="tool">멀티에이전트(Claude)</span></h3>
+    <div class="desc">무엇을, 어떤 톤으로 말할지 산문 대본. <b>AI 활용:</b> Claude 멀티에이전트 워크플로우가 논문 후보를 고르고 초안을 쓰고 <b>적대적 팩트체크</b>까지 (사람이 최종 손봄·승인).</div>
+    <div class="io"><span class="lab">OUT</span><span class="arrow">→</span><span class="chip">dryrun/SCRIPT.md</span></div>
+    <span class="aitag">🤖 AI: 논문 선정 · 초안 · 팩트체크</span> <span class="gatetag">🚪 대본 승인</span>
+  </div></div>
+</div>
+<div class="connector"></div>
+
+<!-- 1 -->
+<div class="stage gate aistage">
+  <div class="row"><div class="num">1</div><div class="body">
+    <h3>콘티 (이중 트랙 스토리보드) <span class="badge b-ai">🤖 AI 스킬</span> <span class="badge b-human">사람 검토</span> <span class="tool">script-to-conti 스킬 (Claude) · .claude/skills/</span></h3>
+    <div class="desc"><b>AI 활용 핵심:</b> <b>script-to-conti 스킬(Claude/LLM)</b>이 산문 대본을 읽고 <b>나레이션 비트(문장) + 비주얼 shot</b>으로 쪼갠다 — 컷 분할, 홀드/몽타주 판단, shot별 <b>영문 이미지 프롬프트</b>·모션·톤까지 LLM이 작성. 사람은 "시각 수 ≪ 문장 수"가 맞는지 검토.</div>
+    <div class="io"><span class="lab">IN</span><span class="chip">SCRIPT.md</span><span class="arrow">→</span><span class="lab">OUT</span><span class="chip">dryrun/CONTI.md</span></div>
+    <span class="aitag">🤖 AI: 대본→콘티 변환 (컷 분할 · 이미지 프롬프트 작성)</span> <span class="gatetag">🚪 콘티 검토</span>
+  </div></div>
+</div>
+<div class="connector"></div>
+
+<!-- 2 -->
+<div class="stage">
+  <div class="row"><div class="num">2</div><div class="body">
+    <h3>파싱 · 정본화 · 검증 <span class="badge b-auto">AUTO</span> <span class="tool">weft dryrun</span></h3>
+    <div class="desc">콘티를 기계가 읽는 정본 JSON으로. 비트/shot 안정 키, cover·모션·reuse 정규화, <b>partition 불변식</b> 검증. (AI 아님 — 결정적 코드)</div>
+    <div class="io"><span class="lab">IN</span><span class="chip">CONTI.md</span><span class="arrow">→</span><span class="lab">OUT</span>
+      <span class="chip">NARRATION.json</span><span class="chip">VISUALS.json</span><span class="chip">PICKS.json</span></div>
+  </div></div>
+</div>
+<div class="connector"></div>
+
+<!-- 3 -->
+<div class="stage aistage">
+  <div class="row"><div class="num">3</div><div class="body">
+    <h3>나레이션 TTS <span class="badge b-ai">🤖 AI</span> <span class="tool">Typecast ssfm-v30</span></h3>
+    <div class="desc"><b>AI 활용:</b> 신경망 TTS가 비트 92개를 음성으로(보이스 Seohyeon). 실측 길이를 재서 타임라인 마스터 클럭으로. 캐시·재시도·실패 격리.</div>
+    <div class="io"><span class="lab">IN</span><span class="chip">NARRATION.json</span><span class="arrow">→</span><span class="lab">OUT</span><span class="chip">AUDIO/beats/*.wav (92)</span></div>
+    <span class="aitag">🤖 AI: 음성 합성</span> <span style="font-size:12px;color:var(--muted);margin-left:6px">사람: 보이스 1회 선택</span>
+  </div></div>
+</div>
+<div class="connector"></div>
+
+<!-- 4 -->
+<div class="stage gate aistage">
+  <div class="row"><div class="num">4</div><div class="body">
+    <h3>이미지 생성 + 픽 <span class="badge b-ai">🤖 AI</span> <span class="badge b-human">사람 선택</span> <span class="tool">OpenAI gpt-image-1</span></h3>
+    <div class="desc"><b>AI 활용:</b> 생성 모델이 image shot 44개를 스타일 바이블(3b1b식 도식 + 웜 라이트 + 문자 없음)로 생성. shot당 후보 N장 → 자동 기본픽. <b>사람 선택은 전용 picker로</b> (아래 ②).</div>
+    <div class="io"><span class="lab">IN</span><span class="chip">VISUALS.json(프롬프트)</span><span class="arrow">→</span><span class="lab">OUT</span><span class="chip">SHOTS/*/images/openai/*.png</span><span class="chip">PICKS.json</span></div>
+    <span class="aitag">🤖 AI: 이미지 생성</span> <span class="gatetag">🚪 picker로 후보 선택 + QC</span>
+  </div></div>
+</div>
+<div class="connector"></div>
+
+<!-- 5 -->
+<div class="stage">
+  <div class="row"><div class="num">5</div><div class="body">
+    <h3>텍스트 카드 렌더 <span class="badge b-auto">AUTO</span> <span class="tool">Pillow</span></h3>
+    <div class="desc">생성 이미지엔 문자 금지 → 인용·숫자 카드(7+2)는 한국어 타이포 PNG로 렌더(어두운 배경+크림+앰버). 문구는 CARDS.json. (AI 아님 — 폰트 렌더링)</div>
+    <div class="io"><span class="lab">IN</span><span class="chip">CARDS.json</span><span class="arrow">→</span><span class="lab">OUT</span><span class="chip">카드 PNG 9장</span></div>
+  </div></div>
+</div>
+<div class="connector"></div>
+
+<!-- 6 -->
+<div class="stage">
+  <div class="row"><div class="num">6</div><div class="body">
+    <h3>타임라인 컴파일 <span class="badge b-auto">AUTO</span> <span class="tool">정수 타임(µs)</span></h3>
+    <div class="desc">실측 길이로 V/A/T 3트랙을 갭·드리프트 없이. 홀드/몽타주/reuse 펼침.</div>
+    <div class="io"><span class="lab">OUT</span><span class="chip">render_plan.json</span><span class="chip">subtitles.srt</span><span class="chip">capcut/timeline.csv</span></div>
+  </div></div>
+</div>
+<div class="connector"></div>
+
+<!-- 7 -->
+<div class="stage">
+  <div class="row"><div class="num">7</div><div class="body">
+    <h3>CapCut draft 빌드 <span class="badge b-auto">AUTO</span> <span class="tool">weft capcut</span></h3>
+    <div class="desc">render_plan을 <b>캡컷이 바로 여는 프로젝트</b>로. 빈 draft 복제→세그먼트(56+92) 주입, <b>켄번스 모션</b> 키프레임, 에셋을 draft 안으로 복사(샌드박스). (AI 아님)</div>
+    <div class="io"><span class="lab">OUT</span><span class="chip">~/Movies/CapCut/.../weft_ep2/</span></div>
+    <span style="font-size:12px;color:var(--muted)">사람: 등록은 CapCut 종료 상태에서</span>
+  </div></div>
+</div>
+<div class="connector"></div>
+
+<!-- 8 -->
+<div class="stage gate">
+  <div class="row"><div class="num">8</div><div class="body">
+    <h3>CapCut에서 편집 · 자막 · 렌더 <span class="badge b-human">사람</span></h3>
+    <div class="desc">draft 열기 → 자막 SRT import → 다듬기 → 최종 export. 긴 영상 렌더는 NLE가 빠름.</div>
+    <div class="io"><span class="lab">IN</span><span class="chip">draft + subtitles.srt</span><span class="arrow">→</span><span class="lab">OUT</span><span class="chip">완성 영상 🎬</span></div>
+    <span class="gatetag">🚪 최종 편집 · 발행</span>
+  </div></div>
+</div>
+
+<h2>🤖 AI가 쓰이는 곳 (한눈에)</h2>
+<div class="callout">
+  <ul>
+    <li><b>대본(0)</b> — Claude 멀티에이전트: 논문 선정 · 초안 · 적대적 팩트체크</li>
+    <li><b>콘티(1)</b> — <b>script-to-conti 스킬(Claude/LLM)</b>: 대본을 컷으로 쪼개고 shot별 영문 이미지 프롬프트·모션 작성 ← <b>"대본을 콘티로 바꾸는" 핵심 AI 단계</b> (스킬 번들: <code>.claude/skills/script-to-conti/</code>)</li>
+    <li><b>나레이션(3)</b> — Typecast 신경망 TTS: 텍스트 → 음성</li>
+    <li><b>이미지(4)</b> — OpenAI gpt-image-1: 프롬프트 → 그림 (picker에서 추가 생성·프롬프트 수정도 AI)</li>
+  </ul>
+  <p style="margin:10px 0 0;font-size:13.5px;color:#473f33">나머지(파싱·카드 렌더·타임라인 컴파일·CapCut 빌드)는 <b>결정적 코드</b>라 AI를 안 쓴다 — 그래서 결과가 매번 똑같고 디버깅이 쉽다.</p>
+</div>
+
+<h2>② 사진 후보 선택 — 이제 전용 picker로 (생략 해제됨)</h2>
+<div class="callout terra">
+  <h3>weft pick — 왼손 단축키 picker</h3>
+  <ul>
+    <li><span class="status s-have">완성</span> 브라우저 picker: shot별 후보를 나란히 보고 고른다. <b>왼손 단축키</b> — <b>W/S</b> shot 이동, <b>A/D</b> 후보 이동, <b>Space</b>/<b>1~9</b> 선택, <b>G</b> 추가 생성.</li>
+    <li><span class="status s-have">AI 추가 생성</span> picker 안에서 <b>+ 생성</b> → 연결된 gpt-image-1으로 후보를 더 만든다.</li>
+    <li><span class="status s-have">프롬프트 수정</span> 프롬프트를 고쳐 <b>저장</b>하거나 그 프롬프트로 바로 재생성.</li>
+    <li><span class="status s-have">외부 이미지</span> 드래그&드롭 또는 파일 경로로 직접 넣기.</li>
+    <li><span class="status s-have">바로 빌드</span> picker의 <b>🎬 CapCut 빌드</b> 버튼으로 선택 반영해 draft 재생성.</li>
+    <li><span class="status s-skip">이전 상태</span> 처음 드라이런은 비용 위해 후보 1장(N=1)이라 "선택"이 없었음 → <b>지금은 앞 10컷에 후보 2장</b> 생성, picker로 선택 가능.</li>
+  </ul>
+</div>
+
+<h2>③ 사람의 손이 들어가는 곳</h2>
+<div class="twocol">
+  <div class="stage"><div class="body"><h3>🚪 대본 승인</h3><div class="desc" style="margin:0">무엇을·어떤 톤으로.</div></div></div>
+  <div class="stage"><div class="body"><h3>🚪 콘티 검토</h3><div class="desc" style="margin:0">홀드/몽타주로 이미지 수 감축 확인.</div></div></div>
+  <div class="stage"><div class="body"><h3>🚪 보이스 선택</h3><div class="desc" style="margin:0">샘플 듣고 1회.</div></div></div>
+  <div class="stage"><div class="body"><h3>🚪 이미지 픽 (picker)</h3><div class="desc" style="margin:0">후보 선택·재생성·외부 삽입.</div></div></div>
+  <div class="stage"><div class="body"><h3>🚪 카드 문구</h3><div class="desc" style="margin:0">인용·숫자 카드 내용.</div></div></div>
+  <div class="stage"><div class="body"><h3>🚪 CapCut 최종</h3><div class="desc" style="margin:0">자막 import · 다듬기 · 발행.</div></div></div>
+</div>
+
+<h2>④ 명령어 (순서대로)</h2>
+<pre><span class="c"># 실행: .venv · 키는 .env (Typecast/OpenAI)</span>
+<span class="c"># 0~1. 대본·콘티 — AI(Claude) 보조로 작성 → SCRIPT.md, CONTI.md</span>
+
+python -m weft.cli dryrun dryrun/CONTI.md --out dryrun/generated_project   <span class="c"># 2. 정본화·검증</span>
+python -m weft.cli tts    dryrun/generated_project                          <span class="g"># 3. 🤖 TTS</span>
+python -m weft.cli images dryrun/generated_project --n 2                    <span class="g"># 4. 🤖 이미지(후보 2장)</span>
+<span class="v">python -m weft.cli pick   dryrun/generated_project</span>                          <span class="c"># 4.5 🖼 picker (후보 선택·재생성·외부)</span>
+python -m weft.cli capcut dryrun/generated_project --folder weft_ep2      <span class="c"># 5~7. 카드·컴파일·draft (CapCut 종료 상태)</span>
+
+<span class="c"># 8. CapCut에서 weft_ep2 열기 → subtitles.srt import → 편집 → 렌더</span>
+</pre>
+
+<footer>Weft · 정보형 영상 자동화 · AI(LLM·TTS·이미지) + 결정적 코드 + 휴먼 터치 게이트 · 최종 렌더는 CapCut 핸드오프</footer>
+
+</div>
+</body>
+</html>

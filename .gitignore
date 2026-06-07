@@ -1,0 +1,9 @@
+.DS_Store
+.env
+.venv/
+__pycache__/
+*.pyc
+dist/
+dryrun/generated_project/
+dryrun/voice_samples/
+*.zip

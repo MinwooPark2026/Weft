@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Weft picker</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",sans-serif}
+  body{display:flex;flex-direction:column;background:#1a1a1a;color:#e0e0e0;font-size:14px}
+  header{display:flex;justify-content:space-between;align-items:center;padding:10px 18px;background:#0d0d0d;border-bottom:1px solid #2a2a2a;gap:14px;flex-wrap:wrap}
+  .title{font-weight:600;font-size:15px}
+  .hdr-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .status .done{color:#4ade80;font-weight:600}
+  select,button,input[type=text]{background:#1a1a1a;color:#e0e0e0;border:1px solid #3a3a3a;border-radius:4px;padding:6px 9px;font-size:12px}
+  button{cursor:pointer;font-weight:600}
+  button.primary{background:#1e3a5f;border-color:#1e3a5f;color:#fff}
+  button.primary:hover:not(:disabled){background:#2a4d7a}
+  button.go{background:#155e3f;border-color:#155e3f;color:#fff}
+  button:disabled{opacity:.5;cursor:wait}
+  .help td{padding:3px 8px;font-size:12px}
+  .help td:first-child{color:#fbbf24;font-family:ui-monospace,monospace}
+  kbd{background:#2a2a2a;padding:1px 6px;border-radius:3px;border:1px solid #444;font-family:ui-monospace,monospace;font-size:11px;color:#fff}
+  .container{display:flex;flex:1;overflow:hidden}
+  .sidebar{width:240px;background:#0d0d0d;border-right:1px solid #2a2a2a;overflow-y:auto;padding:12px;flex-shrink:0}
+  .sidebar h3{margin:0 0 8px;font-size:10px;text-transform:uppercase;color:#666;letter-spacing:1.2px}
+  ul{list-style:none;padding:0;margin:0}
+  .sidebar li{padding:7px 10px;margin:2px 0;cursor:pointer;border-radius:4px;font-size:12.5px;display:flex;align-items:center;gap:6px}
+  .sidebar li:hover{background:#1f1f1f}
+  .sidebar li.active{background:#1e3a5f;color:#fff}
+  .sidebar li .b{margin-left:auto;font-size:10px;font-family:monospace}
+  .sidebar li .b.ok{color:#4ade80}
+  .sidebar li .b.multi{color:#fbbf24}
+  main{flex:1;overflow-y:auto;padding:18px 22px}
+  .cut-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .cut-title{font-size:17px;font-weight:600}
+  .cut-title .pos{color:#666;font-weight:400;font-size:13px;margin-right:8px}
+  .cut-title .mo{color:#7dd3fc;font-size:12px;margin-left:8px;font-family:monospace}
+  .nav button{padding:6px 12px}
+  .meta{background:#222;border-left:3px solid #4ade80;padding:10px 13px;margin-bottom:14px;border-radius:4px;line-height:1.5}
+  .meta .label{color:#777;font-size:10px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px;font-weight:600}
+  .meta .narr{font-size:14px;color:#ddd;margin-bottom:10px}
+  textarea{width:100%;min-height:80px;resize:vertical;background:#141414;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:8px 10px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.45;outline:none}
+  textarea:focus{border-color:#2a4d7a}
+  .prompt-actions{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap}
+  .ext{margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .dropzone{border:1.5px dashed #3a3a3a;border-radius:6px;padding:8px 14px;color:#888;font-size:12px;cursor:pointer}
+  .dropzone.over{border-color:#4ade80;color:#4ade80;background:#0f2417}
+  .images{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+  .card{position:relative;background:#222;border-radius:6px;overflow:hidden;cursor:pointer;border:3px solid transparent;transition:border-color .12s,transform .12s}
+  .card:hover{border-color:#4a4a4a;transform:translateY(-2px)}
+  .card.sel{border-color:#4ade80}
+  .card.current{box-shadow:0 0 0 3px #fbbf24}
+  .card img{width:100%;height:auto;display:block;background:#000;aspect-ratio:16/9;object-fit:cover}
+  .card .label{position:absolute;top:7px;left:7px;background:rgba(0,0,0,.75);padding:2px 8px;border-radius:4px;font-size:11px;font-family:monospace}
+  .card .check{position:absolute;top:7px;right:7px;background:#4ade80;color:#000;width:26px;height:26px;border-radius:50%;display:none;align-items:center;justify-content:center;font-weight:bold}
+  .card.sel .check{display:flex}
+  .card .hk{position:absolute;bottom:7px;right:7px;background:rgba(0,0,0,.6);color:#aaa;padding:2px 7px;border-radius:3px;font-size:10px;font-family:monospace}
+  .empty{color:#555;text-align:center;padding:40px;font-style:italic}
+  .toast{position:fixed;bottom:18px;right:18px;background:#1e3a5f;color:#fff;padding:8px 15px;border-radius:4px;font-size:12px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:560px;white-space:pre-wrap}
+  .toast.show{opacity:1}
+  .toast.err{background:#7f1d1d;pointer-events:auto;cursor:pointer}
+  .toast.warn{background:#78350f;color:#fde68a;pointer-events:auto;cursor:pointer}
+  .overlay{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;background:rgba(13,13,13,.85)}
+  .overlay.hidden{display:none}
+  .ocard{min-width:260px;background:#161616;border:1px solid #333;border-radius:8px;padding:16px 20px}
+  .spin{width:18px;height:18px;border-radius:50%;border:2px solid #555;border-top-color:#7dd3fc;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle;margin-right:10px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <span class="title">🖼 <span id="title">Weft picker</span></span>
+  <div class="hdr-right">
+    <select id="n-select" title="한 번에 생성할 후보 수"><option>1</option><option>2</option><option>3</option></select>
+    <button class="primary" id="gen-btn" title="현재 프롬프트로 후보 추가 생성 (G)">+ 생성</button>
+    <button class="go" id="build-btn" title="현재 선택으로 CapCut 드래프트 재빌드">🎬 CapCut 빌드</button>
+    <span class="status"><span id="pickn" class="done">0</span> / <span id="total">0</span> 선택</span>
+    <span style="position:relative" title="단축키">
+      <button>?</button>
+      <div style="position:absolute;top:130%;right:0;background:#0d0d0d;border:1px solid #3a3a3a;border-radius:6px;padding:8px 10px;z-index:50;display:none" class="hp">
+        <table class="help">
+          <tr><td><kbd>W</kbd><kbd>S</kbd> / <kbd>↑</kbd><kbd>↓</kbd></td><td>이전 / 다음 shot</td></tr>
+          <tr><td><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd></td><td>후보 이동</td></tr>
+          <tr><td><kbd>Space</kbd></td><td>현재 후보 선택</td></tr>
+          <tr><td><kbd>1</kbd>~<kbd>9</kbd></td><td>N번째 후보 선택</td></tr>
+          <tr><td><kbd>G</kbd></td><td>후보 추가 생성</td></tr>
+        </table>
+      </div>
+    </span>
+  </div>
+</header>
+
+<div class="container">
+  <aside class="sidebar"><h3>image shots</h3><ul id="shotlist"></ul></aside>
+  <main>
+    <div class="cut-header">
+      <div class="cut-title"><span class="pos" id="pos">—</span><span id="sid">—</span><span class="mo" id="mo"></span></div>
+      <div class="nav"><button id="prev">← Prev</button> <button id="next">Next →</button></div>
+    </div>
+    <div class="meta" id="meta"><div class="empty">로딩…</div></div>
+    <div class="images" id="images"></div>
+  </main>
+</div>
+
+<div class="overlay hidden" id="overlay"><div class="ocard"><span class="spin"></span><span id="ovtext">생성 중…</span></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const S={shots:[],idx:0,cur:0,busy:false};
+const $=id=>document.getElementById(id);
+const esc=s=>{const d=document.createElement('div');d.textContent=s||'';return d.innerHTML};
+document.querySelector('header span[title=단축키]').onmouseenter=e=>e.currentTarget.querySelector('.hp').style.display='block';
+document.querySelector('header span[title=단축키]').onmouseleave=e=>e.currentTarget.querySelector('.hp').style.display='none';
+
+function toast(m,k=''){const t=$('toast');t.textContent=m;t.className='toast show '+k;clearTimeout(window._t);if(k!=='err'&&k!=='warn')window._t=setTimeout(()=>t.classList.remove('show'),1800);}
+$('toast').onclick=()=>$('toast').classList.remove('show');
+function overlay(on,txt){$('overlay').classList.toggle('hidden',!on);if(txt)$('ovtext').textContent=txt;}
+
+async function load(keep){
+  const d=await (await fetch('/api/state')).json();
+  S.shots=d.shots; $('title').textContent=d.title||'Weft picker'; $('total').textContent=S.shots.length;
+  if(keep!=null){const i=S.shots.findIndex(s=>s.shot_id===keep); if(i>=0)S.idx=i;}
+  renderSidebar(); go(S.idx);
+}
+function pickCount(){return S.shots.filter(s=>s.pick).length;}
+function renderSidebar(){
+  const ul=$('shotlist');
+  ul.innerHTML=S.shots.map((s,i)=>{
+    const n=s.candidates.length;
+    const badge=s.pick?`<span class="b ok">✓${n>1?' '+n:''}</span>`:(n>1?`<span class="b multi">${n}장</span>`:'<span class="b">—</span>');
+    return `<li data-i="${i}" class="${i===S.idx?'active':''}"><span>${i+1}. ${esc(s.shot_id)}</span>${badge}</li>`;
+  }).join('');
+  ul.querySelectorAll('li').forEach(li=>li.onclick=()=>go(+li.dataset.i));
+  $('pickn').textContent=pickCount();
+}
+function go(i){
+  if(i<0||i>=S.shots.length)return;
+  const isNew=i!==S.idx; S.idx=i; const s=S.shots[i];
+  if(isNew){const k=s.candidates.indexOf(s.pick); S.cur=k>=0?k:0;}
+  $('pos').textContent=`${i+1}/${S.shots.length}`; $('sid').textContent=s.shot_id; $('mo').textContent=s.motion?('▸ '+s.motion):'';
+  $('meta').innerHTML=`
+    ${s.context?`<div class="label">나레이션</div><div class="narr">${esc(s.context)}</div>`:''}
+    <div class="label">이미지 프롬프트 (수정 → 저장 또는 생성)</div>
+    <textarea id="prompt">${esc(s.prompt)}</textarea>
+    <div class="prompt-actions">
+      <button class="primary" id="save-prompt">💾 프롬프트 저장</button>
+      <span style="color:#666;font-size:12px">G = 이 프롬프트로 후보 생성</span>
+    </div>
+    <div class="ext">
+      <span class="dropzone" id="drop">⬇ 외부 이미지 드롭 / 클릭</span>
+      <input type="text" id="extpath" placeholder="또는 파일 경로 붙여넣기 (Enter)" style="flex:1;min-width:180px">
+      <input type="file" id="extfile" accept="image/*" style="display:none">
+    </div>`;
+  $('save-prompt').onclick=savePrompt;
+  setupExternal();
+  $('prev').disabled=i===0; $('next').disabled=i===S.shots.length-1;
+  renderCards(); renderSidebar();
+}
+function renderCards(){
+  const s=S.shots[S.idx], imgs=$('images');
+  if(!s.candidates.length){imgs.innerHTML='<div class="empty">후보 없음 — G로 생성하거나 외부 이미지 추가</div>';return;}
+  imgs.innerHTML=s.candidates.map((f,k)=>`
+    <div class="card ${f===s.pick?'sel':''} ${k===S.cur?'current':''}" data-k="${k}" data-f="${esc(f)}">
+      <img src="/img/${encodeURIComponent(s.shot_id)}/${encodeURIComponent(f)}?t=${Date.now()}" loading="lazy">
+      <div class="label">${k+1}. ${esc(f)}</div><div class="check">✓</div>${k<9?`<div class="hk">${k+1}</div>`:''}
+    </div>`).join('');
+  imgs.querySelectorAll('.card').forEach(el=>el.onclick=()=>{S.cur=+el.dataset.k;pick(el.dataset.f);});
+}
+function updateClasses(){
+  const s=S.shots[S.idx];
+  document.querySelectorAll('#images .card').forEach(el=>{
+    el.classList.toggle('current',+el.dataset.k===S.cur);
+    el.classList.toggle('sel',el.dataset.f===s.pick);
+  });
+}
+async function pick(f){
+  const s=S.shots[S.idx]; s.pick=f; updateClasses(); renderSidebar(); toast(`✓ ${s.shot_id} / ${f}`);
+  await fetch('/api/pick',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shot_id:s.shot_id,candidate:f})});
+}
+function moveCur(d){const s=S.shots[S.idx];if(!s.candidates.length)return;S.cur=Math.max(0,Math.min(s.candidates.length-1,S.cur+d));updateClasses();}
+async function savePrompt(){
+  const s=S.shots[S.idx], p=$('prompt').value.trim();
+  await fetch('/api/prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shot_id:s.shot_id,prompt:p})});
+  s.prompt=p; toast('💾 프롬프트 저장됨');
+}
+async function generate(){
+  const s=S.shots[S.idx]; if(S.busy)return; S.busy=true; overlay(true,`${s.shot_id} 생성 중…`); $('gen-btn').disabled=true;
+  try{
+    const n=+$('n-select').value, p=$('prompt')?$('prompt').value.trim():'';
+    const r=await (await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shot_id:s.shot_id,n,prompt:p})})).json();
+    if(!r.ok)throw new Error(r.error);
+    s.candidates=r.candidates; S.cur=s.candidates.indexOf(r.new[0]); renderCards(); renderSidebar();
+    toast(`✓ 생성 ${r.new.join(', ')}`);
+  }catch(e){toast('생성 실패: '+e.message,'err');}
+  finally{S.busy=false;overlay(false);$('gen-btn').disabled=false;}
+}
+function setupExternal(){
+  const dz=$('drop'),file=$('extfile'),pathIn=$('extpath');
+  dz.onclick=()=>file.click();
+  file.onchange=()=>{const f=file.files[0];if(f)readExt(f);};
+  dz.ondragover=e=>{e.preventDefault();dz.classList.add('over');};
+  dz.ondragleave=()=>dz.classList.remove('over');
+  dz.ondrop=e=>{e.preventDefault();dz.classList.remove('over');const f=e.dataTransfer.files[0];if(f)readExt(f);};
+  pathIn.onkeydown=e=>{if(e.key==='Enter'&&pathIn.value.trim())addExt({path:pathIn.value.trim()});};
+}
+function readExt(f){const r=new FileReader();r.onload=()=>addExt({data:r.result});r.readAsDataURL(f);}
+async function addExt(payload){
+  const s=S.shots[S.idx]; overlay(true,'외부 이미지 추가 중…');
+  try{
+    const r=await (await fetch('/api/external',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shot_id:s.shot_id,...payload})})).json();
+    if(!r.ok)throw new Error(r.error);
+    s.candidates=r.candidates; S.cur=s.candidates.indexOf(r.name); renderCards(); renderSidebar(); toast('✓ 외부 이미지 추가 '+r.name);
+  }catch(e){toast('추가 실패: '+e.message,'err');}
+  finally{overlay(false);}
+}
+async function build(){
+  if(S.busy)return; S.busy=true; overlay(true,'CapCut 드래프트 빌드 중…'); $('build-btn').disabled=true;
+  try{
+    const r=await (await fetch('/api/build',{method:'POST'})).json();
+    if(!r.ok)throw new Error(r.error);
+    if(r.capcut_running) toast('⚠ CapCut 실행 중이라 등록 생략 — CapCut 종료 후 빌드하면 목록 갱신됨. 파일은 갱신됨('+r.video_segments+' video).','warn');
+    else toast('🎬 빌드+등록 완료 — CapCut에서 weft_ep2 열기 ('+r.video_segments+' video / '+r.audio_segments+' audio)');
+  }catch(e){toast('빌드 실패: '+e.message,'err');}
+  finally{S.busy=false;overlay(false);$('build-btn').disabled=false;}
+}
+$('prev').onclick=()=>go(S.idx-1); $('next').onclick=()=>go(S.idx+1);
+$('gen-btn').onclick=generate; $('build-btn').onclick=build;
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT')return;
+  const c=e.code, dg=c.startsWith('Digit')?+c.slice(5):c.startsWith('Numpad')?+c.slice(6):0;
+  if(c==='ArrowUp'||c==='KeyW'){e.preventDefault();go(S.idx-1);}
+  else if(c==='ArrowDown'||c==='KeyS'){e.preventDefault();go(S.idx+1);}
+  else if(c==='ArrowLeft'||c==='KeyA'){e.preventDefault();moveCur(-1);}
+  else if(c==='ArrowRight'||c==='KeyD'){e.preventDefault();moveCur(1);}
+  else if(c==='Space'){e.preventDefault();const s=S.shots[S.idx],f=s.candidates[S.cur];if(f)pick(f);}
+  else if(c==='KeyG'){e.preventDefault();generate();}
+  else if(dg>=1&&dg<=9){const s=S.shots[S.idx],f=s.candidates[dg-1];if(f){e.preventDefault();S.cur=dg-1;pick(f);}}
+});
+load().catch(e=>toast('로딩 실패: '+e.message,'err'));
+</script>
+</body>
+</html>
