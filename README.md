@@ -20,6 +20,7 @@ Weft는 긴 호흡의 설명형 영상을 위한 **이중 트랙(dual-track) 워
 ### 구성 요소
 
 - `install.sh`: 설치 스크립트 (venv 생성, `weft` 명령 설치, `.env` 시드)
+- `uninstall.sh`: 제거 스크립트 (`weft` 명령·venv 제거, `.env`는 보존)
 - `weft/`: 파이썬 CLI와 핵심 파이프라인
 - `.claude/skills/script-to-conti/`: 대본을 Weft 이중 트랙 `CONTI.md`로 바꾸는 스킬
 - `weft/picker/`: 로컬 이미지 후보 선택기(picker)
@@ -45,6 +46,16 @@ Weft는 긴 호흡의 설명형 영상을 위한 **이중 트랙(dual-track) 워
 - 이미지 생성용 `OPENAI_API_KEY`
 
 editable 설치라서 weft는 어느 작업 디렉터리에서든 이 `.env`를 찾습니다. 현재 폴더에 둔 프로젝트별 `.env`도 인식됩니다.
+
+### 제거
+
+설치한 것을 깔끔히 되돌리려면 저장소 안에서:
+
+```bash
+./uninstall.sh
+```
+
+`weft` 명령(심볼릭 링크)·venv·빌드 산물을 지웁니다. 키가 든 `.env`는 **보존**됩니다(완전히 지우려면 안내대로 직접 삭제).
 
 ### 빠른 시작
 
@@ -136,7 +147,7 @@ weft images
 
 - `conti`를 다시 실행하면 `generated_project`가 새로 만들어지고 픽이 초기화됩니다.
 - picker로 고른 뒤에는, 프로젝트를 의도적으로 다시 만들 게 아니라면 `capcut`만 바로 실행하세요.
-- 드래프트를 등록하기 전에 CapCut을 종료하세요.
+- `weft capcut`은 **CapCut이 바로 여는 드래프트(프로젝트)**를 만들어 CapCut 목록에 등록합니다. 등록은 CapCut의 프로젝트 목록 파일(`root_meta_info.json`)을 고치는데, **CapCut이 켜져 있으면 종료할 때 그 파일을 자기 메모리로 덮어써 새 드래프트가 사라집니다.** 그래서 빌드는 CapCut을 종료한 상태에서 하세요. (켜진 채 실행하면 등록을 건너뛰고 파일만 만들어 둡니다 — CapCut을 껐다 켜야 목록에 보입니다.)
 
 ### 라이선스
 
@@ -160,6 +171,7 @@ This lets one visual cover multiple narration beats, or one narration beat use s
 ### Included Tools
 
 - `install.sh`: installer (creates venv, installs the `weft` command, seeds `.env`)
+- `uninstall.sh`: uninstaller (removes the `weft` command and venv; keeps `.env`)
 - `weft/`: Python CLI and core pipeline
 - `.claude/skills/script-to-conti/`: skill for turning a script into a Weft dual-track `CONTI.md`
 - `weft/picker/`: local image candidate picker
@@ -185,6 +197,16 @@ Then fill the repo's `.env` with your own keys:
 - `OPENAI_API_KEY` for image generation
 
 Because the install is editable, weft finds this `.env` from any working directory. A per-project `.env` in the current folder also works.
+
+### Uninstall
+
+To cleanly undo the install, run inside the repo:
+
+```bash
+./uninstall.sh
+```
+
+It removes the `weft` command (symlink), the venv, and build artifacts. Your `.env` (with keys) is **kept**.
 
 ### Quick Start
 
@@ -276,7 +298,7 @@ See `STYLE_GUIDE.md` for templates and examples.
 
 - Re-running `conti` rebuilds `generated_project` and resets picks.
 - After using the picker, run `capcut` directly unless you intentionally want to regenerate the project.
-- Close CapCut before registering a draft.
+- `weft capcut` builds a **CapCut-openable draft (project)** and registers it in CapCut's project list. Registration edits CapCut's project-list file (`root_meta_info.json`), and **if CapCut is running it overwrites that file from memory on quit, so a freshly registered draft disappears.** Build with CapCut closed. (If it's running, registration is skipped and only the files are written — relaunch CapCut to see the draft.)
 
 ### License
 
