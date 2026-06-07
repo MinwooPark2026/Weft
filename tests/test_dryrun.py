@@ -252,6 +252,22 @@ class DryRunTest(unittest.TestCase):
             ".agents mirror drifted from .claude — keep the two SKILL.md identical",
         )
 
+    def test_typecast_payload_attaches_emotion_only_for_known_non_normal_preset(self) -> None:
+        from weft.providers.typecast_tts import TypecastTTS
+
+        neutral = TypecastTTS(api_key="k", voice_id="v")._payload("hi")
+        self.assertNotIn("prompt", neutral)  # default 'normal' keeps the validated payload
+        self.assertEqual("kor", neutral["language"])
+
+        happy = TypecastTTS(api_key="k", voice_id="v", emotion="happy")._payload("hi")
+        self.assertEqual(
+            {"emotion_type": "preset", "emotion_preset": "happy", "emotion_intensity": 1.0},
+            happy["prompt"],
+        )
+
+        bad = TypecastTTS(api_key="k", voice_id="v", emotion="excited")._payload("hi")
+        self.assertNotIn("prompt", bad)  # unknown preset → neutral, never a mid-run 400
+
 
 if __name__ == "__main__":
     unittest.main()

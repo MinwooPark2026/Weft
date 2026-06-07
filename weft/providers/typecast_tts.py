@@ -9,6 +9,10 @@ from dataclasses import dataclass
 
 _ENDPOINT = "https://api.typecast.ai/v1/text-to-speech"
 
+# ssfm-v30 preset emotions (Typecast). "normal" = neutral → omitted from the
+# payload so the request stays byte-identical to the validated default call.
+_EMOTION_PRESETS = {"normal", "happy", "sad", "angry", "whisper", "toneup", "tonedown"}
+
 
 @dataclass
 class TypecastTTS:
@@ -23,6 +27,7 @@ class TypecastTTS:
     model: str = "ssfm-v30"
     language: str = "kor"
     emotion: str = "normal"
+    emotion_intensity: float = 1.0
     audio_format: str = "wav"
     timeout: int = 120
     retries: int = 4
@@ -33,16 +38,26 @@ class TypecastTTS:
         )
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
-    def synthesize(self, text: str) -> bytes:
-        body = json.dumps(
-            {
-                "voice_id": self.voice_id,
-                "text": text,
-                "model": self.model,
-                "language": self.language,
-                "output": {"audio_format": self.audio_format},
+    def _payload(self, text: str) -> dict:
+        body = {
+            "voice_id": self.voice_id,
+            "text": text,
+            "model": self.model,
+            "language": self.language,
+            "output": {"audio_format": self.audio_format},
+        }
+        # Only attach an emotion prompt for a recognized non-neutral preset; an
+        # unknown TYPECAST_EMOTION falls back to neutral instead of a 400 mid-run.
+        if self.emotion in _EMOTION_PRESETS and self.emotion != "normal":
+            body["prompt"] = {
+                "emotion_type": "preset",
+                "emotion_preset": self.emotion,
+                "emotion_intensity": self.emotion_intensity,
             }
-        ).encode("utf-8")
+        return body
+
+    def synthesize(self, text: str) -> bytes:
+        body = json.dumps(self._payload(text)).encode("utf-8")
         request = urllib.request.Request(
             _ENDPOINT,
             data=body,
