@@ -42,8 +42,8 @@ def load_style(project_dir: str | Path) -> str:
     """Active style suffix for image generation.
 
     Precedence: ``<project_dir>/STYLE.txt`` → ``<project_dir>/../STYLE.txt`` →
-    ``DEFAULT_STYLE``. Edit STYLE.txt to give a whole video your own consistent
-    look without touching code (STYLE_GUIDE.md).
+    generated default ``STYLE.txt``. Edit STYLE.txt to give a whole video your
+    own consistent look without touching code (STYLE_GUIDE.md).
     """
     project_dir = Path(project_dir)
     for candidate in (project_dir / "STYLE.txt", project_dir.parent / "STYLE.txt"):
@@ -51,6 +51,11 @@ def load_style(project_dir: str | Path) -> str:
             text = candidate.read_text(encoding="utf-8").strip()
             if text:
                 return text
+    default_path = project_dir.parent / "STYLE.txt" if project_dir.name == "generated_project" else project_dir / "STYLE.txt"
+    try:
+        default_path.write_text(DEFAULT_STYLE + "\n", encoding="utf-8")
+    except OSError:
+        pass
     return DEFAULT_STYLE
 
 

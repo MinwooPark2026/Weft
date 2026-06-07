@@ -147,12 +147,12 @@ weft conti
 샷별 프롬프트 + 공유 Style 접미사
 ```
 
-프로젝트 폴더(`CONTI.md` 옆)에 `STYLE.txt` 파일을 두면 공유 스타일을 덮어쓸 수 있습니다:
+프로젝트 폴더(`CONTI.md` 옆)에 `STYLE.txt` 파일을 두면 공유 스타일을 덮어쓸 수 있습니다. 파일이 없으면 처음 이미지를 생성할 때 기본 3b1b 스타일 문장이 `STYLE.txt`로 자동 생성됩니다:
 
 - `STYLE.txt` (프로젝트 폴더, `CONTI.md` 옆)
 - 또는 `generated_project/STYLE.txt`
 
-기본값은 `weft/assets.py`의 `DEFAULT_STYLE`입니다. 그다음 프로젝트 폴더 안에서 이미지를 다시 생성:
+기본값은 `weft/assets.py`의 `DEFAULT_STYLE`과 같은 문장입니다. 그다음 프로젝트 폴더 안에서 이미지를 다시 생성:
 
 ```bash
 weft images
@@ -315,12 +315,12 @@ Every generated image receives:
 shot-specific prompt + shared Style suffix
 ```
 
-Override the shared style by placing a `STYLE.txt` file in the project folder (next to `CONTI.md`):
+Override the shared style by placing a `STYLE.txt` file in the project folder (next to `CONTI.md`). If the file is missing, the first image-generation run materializes the default 3b1b-style sentence into `STYLE.txt`:
 
 - `STYLE.txt` (in the project folder, next to `CONTI.md`)
 - or `generated_project/STYLE.txt`
 
-The built-in default is `DEFAULT_STYLE` in `weft/assets.py`. Then, from inside the project folder, regenerate images:
+The generated default matches `DEFAULT_STYLE` in `weft/assets.py`. Then, from inside the project folder, regenerate images:
 
 ```bash
 weft images

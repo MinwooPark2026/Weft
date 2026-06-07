@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from weft.cli import _default_capcut_folder, main as cli_main
-from weft.assets import generate_images, load_style
+from weft.assets import DEFAULT_STYLE, generate_images, load_style
 from weft.compiler import compile_render_plan
 from weft.exporters.capcut_draft import build_capcut_draft
 from weft.parser import parse_conti
@@ -152,6 +152,22 @@ class DryRunTest(unittest.TestCase):
             self.assertEqual("Style: parent", load_style(generated))
             (generated / "STYLE.txt").write_text("Style: generated", encoding="utf-8")
             self.assertEqual("Style: generated", load_style(generated))
+
+    def test_load_style_materializes_default_style_when_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp) / "project"
+            generated = parent / "generated_project"
+            generated.mkdir(parents=True)
+            self.assertEqual(DEFAULT_STYLE, load_style(generated))
+            self.assertEqual(DEFAULT_STYLE, (parent / "STYLE.txt").read_text(encoding="utf-8").strip())
+
+    def test_load_style_materializes_default_inside_custom_project_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project_dir = Path(tmp) / "custom-out"
+            project_dir.mkdir()
+            self.assertEqual(DEFAULT_STYLE, load_style(project_dir))
+            self.assertEqual(DEFAULT_STYLE, (project_dir / "STYLE.txt").read_text(encoding="utf-8").strip())
+            self.assertFalse((Path(tmp) / "STYLE.txt").exists())
 
     def test_capcut_existing_folder_is_archived_not_deleted(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
