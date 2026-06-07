@@ -135,6 +135,7 @@ function renderSidebar(){
 }
 function go(i){
   if(i<0||i>=S.shots.length)return;
+  const prevTa=$('prompt'); if(prevTa&&S.shots[S.idx])S.shots[S.idx].prompt=prevTa.value;  // 저장 안 한 편집 보존
   const isNew=i!==S.idx; S.idx=i; const s=S.shots[i];
   if(isNew){const k=s.candidates.indexOf(s.pick); S.cur=k>=0?k:0;}
   $('pos').textContent=`${i+1}/${S.shots.length}`; $('sid').textContent=s.shot_id; $('mo').textContent=s.motion?('▸ '+s.motion):'';
@@ -144,13 +145,16 @@ function go(i){
     <textarea id="prompt">${esc(s.prompt)}</textarea>
     <div class="prompt-actions">
       <button class="primary" id="save-prompt">💾 프롬프트 저장</button>
-      <span style="color:#666;font-size:12px">G = 이 프롬프트로 후보 생성</span>
+      <span style="color:#666;font-size:12px">⌘/Ctrl+Enter = 이 프롬프트로 생성 (또는 + 생성)</span>
     </div>
     <div class="ext">
       <span class="dropzone" id="drop">⬇ 외부 이미지 드롭 / 클릭</span>
       <input type="text" id="extpath" placeholder="또는 파일 경로 붙여넣기 (Enter)" style="flex:1;min-width:180px">
       <input type="file" id="extfile" accept="image/*" style="display:none">
     </div>`;
+  const ta=$('prompt');
+  ta.oninput=()=>{S.shots[S.idx].prompt=ta.value;};
+  ta.onkeydown=e=>{if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();generate();}};
   $('save-prompt').onclick=savePrompt;
   setupExternal();
   $('prev').disabled=i===0; $('next').disabled=i===S.shots.length-1;
@@ -189,7 +193,7 @@ async function generate(){
     const n=+$('n-select').value, p=$('prompt')?$('prompt').value.trim():'';
     const r=await (await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shot_id:s.shot_id,n,prompt:p})})).json();
     if(!r.ok)throw new Error(r.error);
-    s.candidates=r.candidates; S.cur=s.candidates.indexOf(r.new[0]); renderCards(); renderSidebar();
+    s.prompt=p; s.candidates=r.candidates; S.cur=s.candidates.indexOf(r.new[0]); renderCards(); renderSidebar();
     toast(`✓ 생성 ${r.new.join(', ')}`);
   }catch(e){toast('생성 실패: '+e.message,'err');}
   finally{S.busy=false;overlay(false);$('gen-btn').disabled=false;}

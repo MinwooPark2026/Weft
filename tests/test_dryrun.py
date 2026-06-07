@@ -292,6 +292,38 @@ class DryRunTest(unittest.TestCase):
         bad = TypecastTTS(api_key="k", voice_id="v", emotion="excited")._payload("hi")
         self.assertNotIn("prompt", bad)  # unknown preset → neutral, never a mid-run 400
 
+    def test_append_candidates_uses_and_persists_edited_prompt(self) -> None:
+        from weft.assets import append_candidates
+
+        captured: dict[str, str] = {}
+
+        class FakeImageProvider:
+            def __init__(self, **_kwargs) -> None:
+                pass
+
+            def cache_key(self, _prompt: str) -> str:
+                return "k"
+
+            def generate(self, prompt: str, n: int = 2) -> list[bytes]:
+                captured["prompt"] = prompt
+                return [b"png" for _ in range(n)]
+
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {"OPENAI_API_KEY": "test"}, clear=False):
+            root = Path(tmp)
+            (root / "VISUALS.json").write_text(
+                json.dumps({"schema": "weft-visual-v1",
+                            "shots": [{"id": "s01", "source_kind": "image", "prompt": "OLD subject"}]}),
+                encoding="utf-8",
+            )
+            with patch("weft.assets.OpenAIImage", FakeImageProvider):
+                r = append_candidates(root, "s01", n=1, prompt="NEW subject")
+
+            self.assertIn("NEW subject", captured["prompt"])   # generation used the edited prompt
+            self.assertNotIn("OLD subject", captured["prompt"])
+            self.assertEqual(["candidate_001.png"], r["new"])
+            visuals = json.loads((root / "VISUALS.json").read_text(encoding="utf-8"))
+            self.assertEqual("NEW subject", visuals["shots"][0]["prompt"])  # and persisted it
+
 
 if __name__ == "__main__":
     unittest.main()

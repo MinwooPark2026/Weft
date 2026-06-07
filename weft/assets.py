@@ -324,6 +324,7 @@ def _clear_auto_candidates(img_dir: Path) -> None:
 
 def _sync_shot_prompt(project_dir: Path, shot_id: str, prompt: str) -> None:
     shot_dir = project_dir / "SHOTS" / shot_id
+    shot_dir.mkdir(parents=True, exist_ok=True)
     shot_json = shot_dir / "SHOT.json"
     if shot_json.is_file():
         data = json.loads(shot_json.read_text(encoding="utf-8"))
