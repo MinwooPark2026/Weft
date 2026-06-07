@@ -4,6 +4,6 @@
 __pycache__/
 *.pyc
 dist/
-dryrun/generated_project/
-dryrun/voice_samples/
+example/generated_project/
+example/voice_samples/
 *.zip

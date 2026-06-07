@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class DryRunTest(unittest.TestCase):
     def test_parse_validate_and_compile_existing_conti(self) -> None:
-        project = parse_conti(ROOT / "dryrun" / "CONTI.md")
+        project = parse_conti(ROOT / "example" / "CONTI.md")
         violations = validate_project(project)
         self.assertEqual([], violations)
 
@@ -36,7 +36,7 @@ class DryRunTest(unittest.TestCase):
         self.assertGreater(len(plan["video"]), 50)
 
     def test_write_project_materializes_assets_and_exports(self) -> None:
-        project = parse_conti(ROOT / "dryrun" / "CONTI.md")
+        project = parse_conti(ROOT / "example" / "CONTI.md")
         with tempfile.TemporaryDirectory() as tmp:
             result = write_project(project, tmp)
             self.assertEqual([], result["violations"])

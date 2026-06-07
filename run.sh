@@ -20,7 +20,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 PY=".venv/bin/python"
 
-PROJECT="${2:-${PROJECT:-dryrun}}"
+PROJECT="${2:-${PROJECT:-example}}"
 CONTI="${CONTI:-$PROJECT/CONTI.md}"
 OUT="${OUT:-$PROJECT/generated_project}"
 FOLDER="${FOLDER:-weft_$PROJECT}"

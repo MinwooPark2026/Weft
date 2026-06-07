@@ -22,7 +22,7 @@ description: >-
 
 이 스킬 문서 하나로 콘티를 만들 수 있다(아래 §출력 형식에 표 스키마가 다 있음). 함께 보면 좋은 것:
 
-- **gold 예시**: [`dryrun/CONTI.md`](../../../dryrun/CONTI.md) — 검증 0 에러로 통과한 실제 콘티. 구조를 이걸로 모사한다.
+- **gold 예시**: [`example/CONTI.md`](../../../example/CONTI.md) — 검증 0 에러로 통과한 실제 콘티. 구조를 이걸로 모사한다.
 - [`STYLE_GUIDE.md`](../../../STYLE_GUIDE.md) — 이미지 일관성(스타일 바이블) 설정·교체. 모든 이미지 프롬프트가 상속할 `Style:` 문장은 여기서 정한다.
 
 ## 핵심 원칙
@@ -74,7 +74,7 @@ description: >-
 
 ## 텍스트 카드 (❝) 처리
 
-`❝` shot의 실제 온스크린 문구는 `dryrun/generated_project/CARDS.json` 에 `{shot_id: "문구\n여러 줄"}` 로 넣는다(빌드 시 Pillow가 한국어 타이포 PNG로 렌더). 콘티의 `자막`/`프롬프트 / 문구` 칸에 의도를 적어두고, CARDS.json에 최종 문구를 확정.
+`❝` shot의 실제 온스크린 문구는 `example/generated_project/CARDS.json` 에 `{shot_id: "문구\n여러 줄"}` 로 넣는다(빌드 시 Pillow가 한국어 타이포 PNG로 렌더). 콘티의 `자막`/`프롬프트 / 문구` 칸에 의도를 적어두고, CARDS.json에 최종 문구를 확정.
 
 ## 절차
 

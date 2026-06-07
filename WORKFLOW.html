@@ -93,7 +93,7 @@
   <div class="row"><div class="num">0</div><div class="body">
     <h3>대본 작성 <span class="badge b-human">사람</span> <span class="badge b-ai">🤖 AI 보조</span> <span class="tool">멀티에이전트(Claude)</span></h3>
     <div class="desc">무엇을, 어떤 톤으로 말할지 산문 대본. <b>AI 활용:</b> Claude 멀티에이전트 워크플로우가 논문 후보를 고르고 초안을 쓰고 <b>적대적 팩트체크</b>까지 (사람이 최종 손봄·승인).</div>
-    <div class="io"><span class="lab">OUT</span><span class="arrow">→</span><span class="chip">dryrun/SCRIPT.md</span></div>
+    <div class="io"><span class="lab">OUT</span><span class="arrow">→</span><span class="chip">example/SCRIPT.md</span></div>
     <span class="aitag">🤖 AI: 논문 선정 · 초안 · 팩트체크</span> <span class="gatetag">🚪 대본 승인</span>
   </div></div>
 </div>
@@ -104,7 +104,7 @@
   <div class="row"><div class="num">1</div><div class="body">
     <h3>콘티 (이중 트랙 스토리보드) <span class="badge b-ai">🤖 AI 스킬</span> <span class="badge b-human">사람 검토</span> <span class="tool">script-to-conti 스킬 (Claude) · .claude/skills/</span></h3>
     <div class="desc"><b>AI 활용 핵심:</b> <b>script-to-conti 스킬(Claude/LLM)</b>이 산문 대본을 읽고 <b>나레이션 비트(문장) + 비주얼 shot</b>으로 쪼갠다 — 컷 분할, 홀드/몽타주 판단, shot별 <b>영문 이미지 프롬프트</b>·모션·톤까지 LLM이 작성. 사람은 "시각 수 ≪ 문장 수"가 맞는지 검토.</div>
-    <div class="io"><span class="lab">IN</span><span class="chip">SCRIPT.md</span><span class="arrow">→</span><span class="lab">OUT</span><span class="chip">dryrun/CONTI.md</span></div>
+    <div class="io"><span class="lab">IN</span><span class="chip">SCRIPT.md</span><span class="arrow">→</span><span class="lab">OUT</span><span class="chip">example/CONTI.md</span></div>
     <span class="aitag">🤖 AI: 대본→콘티 변환 (컷 분할 · 이미지 프롬프트 작성)</span> <span class="gatetag">🚪 콘티 검토</span>
   </div></div>
 </div>
@@ -222,11 +222,11 @@
 <pre><span class="c"># 실행: .venv · 키는 .env (Typecast/OpenAI)</span>
 <span class="c"># 0~1. 대본·콘티 — AI(Claude) 보조로 작성 → SCRIPT.md, CONTI.md</span>
 
-python -m weft.cli dryrun dryrun/CONTI.md --out dryrun/generated_project   <span class="c"># 2. 정본화·검증</span>
-python -m weft.cli tts    dryrun/generated_project                          <span class="g"># 3. 🤖 TTS</span>
-python -m weft.cli images dryrun/generated_project --n 2                    <span class="g"># 4. 🤖 이미지(후보 2장)</span>
-<span class="v">python -m weft.cli pick   dryrun/generated_project</span>                          <span class="c"># 4.5 🖼 picker (후보 선택·재생성·외부)</span>
-python -m weft.cli capcut dryrun/generated_project --folder weft_ep2      <span class="c"># 5~7. 카드·컴파일·draft (CapCut 종료 상태)</span>
+python -m weft.cli dryrun example/CONTI.md --out example/generated_project   <span class="c"># 2. 정본화·검증</span>
+python -m weft.cli tts    example/generated_project                          <span class="g"># 3. 🤖 TTS</span>
+python -m weft.cli images example/generated_project --n 2                    <span class="g"># 4. 🤖 이미지(후보 2장)</span>
+<span class="v">python -m weft.cli pick   example/generated_project</span>                          <span class="c"># 4.5 🖼 picker (후보 선택·재생성·외부)</span>
+python -m weft.cli capcut example/generated_project --folder weft_ep2      <span class="c"># 5~7. 카드·컴파일·draft (CapCut 종료 상태)</span>
 
 <span class="c"># 8. CapCut에서 weft_ep2 열기 → subtitles.srt import → 편집 → 렌더</span>
 </pre>

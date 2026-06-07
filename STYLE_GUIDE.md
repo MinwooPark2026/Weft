@@ -17,7 +17,7 @@
 ## 2. 내 스타일로 바꾸기 — 3단계
 
 1. 아래 **4축 템플릿**으로 나만의 `Style:` 문장을 영어로 작성한다.
-2. 그 문장을 **`<project>/generated_project/STYLE.txt`** 에 저장한다 (없으면 만들면 됨; `dryrun/STYLE.txt` 도 인식).
+2. 그 문장을 **`<project>/generated_project/STYLE.txt`** 에 저장한다 (없으면 만들면 됨; `example/STYLE.txt` 도 인식).
 3. **`./run.sh images`** (또는 picker의 `+ 생성`)로 다시 생성하면 **모든 컷이 새 스타일**로 나온다.
 
 > 코드가 `STYLE.txt`를 읽어 모든 생성 프롬프트에 붙인다(`load_style`). 파일이 없으면 기본(3b1b)을 쓴다. → **코드 수정 없이 파일 하나로 영상 룩 전체를 바꾼다.**

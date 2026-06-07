@@ -24,7 +24,7 @@ Weft는 긴 호흡의 설명형 영상을 위한 **이중 트랙(dual-track) 워
 - `weft/picker/`: 로컬 이미지 후보 선택기(picker)
 - `STYLE_GUIDE.md`: 이미지 스타일 커스터마이즈 가이드
 - `WORKFLOW.html`: 시각적 워크플로우 개요
-- `dryrun/CONTI.md`, `dryrun/SCRIPT.md`: 예시 입력
+- `example/CONTI.md`, `example/SCRIPT.md`: 예시 입력
 
 생성물(오디오·이미지·CapCut 드래프트)은 로컬에서 만들어지며 저장소에 커밋되지 않습니다.
 
@@ -53,9 +53,9 @@ cp .env.example .env
 동등한 직접 실행 명령:
 
 ```bash
-python3 -m unittest discover -s tests
-python3 -m weft.cli validate dryrun/CONTI.md
-python3 -m weft.cli dryrun dryrun/CONTI.md --out dryrun/generated_project
+python3 -m unittest discover -s example
+python3 -m weft.cli validate example/CONTI.md
+python3 -m weft.cli dryrun example/CONTI.md --out example/generated_project
 ```
 
 ### 프로젝트 명령
@@ -153,7 +153,7 @@ This lets one visual cover multiple narration beats, or one narration beat use s
 - `weft/picker/`: local image candidate picker
 - `STYLE_GUIDE.md`: image style customization guide
 - `WORKFLOW.html`: visual workflow overview
-- `dryrun/CONTI.md`, `dryrun/SCRIPT.md`: sample input
+- `example/CONTI.md`, `example/SCRIPT.md`: sample input
 
 Generated media (audio, images, CapCut drafts) is produced locally and is not committed.
 
@@ -182,9 +182,9 @@ Fill `.env` with your own keys:
 Equivalent direct commands:
 
 ```bash
-python3 -m unittest discover -s tests
-python3 -m weft.cli validate dryrun/CONTI.md
-python3 -m weft.cli dryrun dryrun/CONTI.md --out dryrun/generated_project
+python3 -m unittest discover -s example
+python3 -m weft.cli validate example/CONTI.md
+python3 -m weft.cli dryrun example/CONTI.md --out example/generated_project
 ```
 
 ### Project Commands
