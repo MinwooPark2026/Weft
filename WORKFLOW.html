@@ -150,7 +150,7 @@
 <!-- 5 -->
 <div class="stage">
   <div class="row"><div class="num">5</div><div class="body">
-    <h3>텍스트 카드 렌더 <span class="badge b-auto">AUTO</span> <span class="cmd">weft capcut</span><span class="cmdnote">빌드에 포함</span> <span class="tool">Pillow</span></h3>
+    <h3>텍스트 카드 렌더 <span class="badge b-auto">AUTO</span> <span class="cmd na">weft capcut에 포함</span> <span class="tool">Pillow</span></h3>
     <div class="desc">생성 이미지엔 문자 금지 → 인용·숫자 카드(7+2)는 한국어 타이포 PNG로 렌더(어두운 배경+크림+앰버). 문구는 CARDS.json. (AI 아님 — 폰트 렌더링)</div>
     <div class="io"><span class="lab">IN</span><span class="chip">CARDS.json</span><span class="arrow">→</span><span class="lab">OUT</span><span class="chip">카드 PNG 9장</span></div>
   </div></div>
@@ -160,7 +160,7 @@
 <!-- 6 -->
 <div class="stage">
   <div class="row"><div class="num">6</div><div class="body">
-    <h3>타임라인 컴파일 <span class="badge b-auto">AUTO</span> <span class="cmd">weft conti</span><span class="cmdnote">tts·images가 갱신</span> <span class="tool">정수 타임(µs)</span></h3>
+    <h3>타임라인 컴파일 <span class="badge b-auto">AUTO</span> <span class="cmd na">weft conti에 포함</span><span class="cmdnote">tts·images가 갱신 (capcut은 읽기만)</span> <span class="tool">정수 타임(µs)</span></h3>
     <div class="desc">실측 길이로 V/A/T 3트랙을 갭·드리프트 없이. 홀드/몽타주/reuse 펼침.</div>
     <div class="io"><span class="lab">OUT</span><span class="chip">render_plan.json</span><span class="chip">subtitles.srt</span><span class="chip">capcut/timeline.csv</span></div>
   </div></div>
@@ -228,11 +228,11 @@
 <span class="c">#      (AI가 스킬 위치를 찾을 때:  weft whereisskill)</span>
 
 cd my-video                <span class="c"># CONTI.md가 든 프로젝트 폴더로 이동</span>
-weft conti                 <span class="c"># 2. 정본화·검증 (./CONTI.md → ./generated_project/)</span>
+weft conti                 <span class="c"># 2·6. 정본화·검증·타임라인 컴파일 (./CONTI.md → ./generated_project/)</span>
 weft tts                   <span class="g"># 3. 🤖 TTS</span>
 weft images --n 2          <span class="g"># 4. 🤖 이미지(후보 2장)</span>
 <span class="v">weft pick</span>                  <span class="c"># 4.5 🖼 picker (후보 선택·재생성·외부)</span>
-weft capcut                <span class="c"># 5~7. 카드·컴파일·draft (CapCut 종료 상태)</span>
+weft capcut                <span class="c"># 5·7. 카드 렌더·draft 빌드 (CapCut 종료 상태)</span>
 
 <span class="c"># 8. CapCut에서 draft 열기 → subtitles.srt import → 편집 → 렌더</span>
 </pre>
