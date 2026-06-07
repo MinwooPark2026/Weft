@@ -53,7 +53,7 @@ cp .env.example .env
 동등한 직접 실행 명령:
 
 ```bash
-python3 -m unittest discover -s example
+python3 -m unittest discover -s tests
 python3 -m weft.cli validate example/CONTI.md
 python3 -m weft.cli dryrun example/CONTI.md --out example/generated_project
 ```
@@ -182,7 +182,7 @@ Fill `.env` with your own keys:
 Equivalent direct commands:
 
 ```bash
-python3 -m unittest discover -s example
+python3 -m unittest discover -s tests
 python3 -m weft.cli validate example/CONTI.md
 python3 -m weft.cli dryrun example/CONTI.md --out example/generated_project
 ```
