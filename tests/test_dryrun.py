@@ -252,6 +252,30 @@ class DryRunTest(unittest.TestCase):
             ".agents mirror drifted from .claude — keep the two SKILL.md identical",
         )
 
+    def test_cli_whereisskill_prints_skill_paths(self) -> None:
+        stdout = io.StringIO()
+        with patch("sys.stdout", stdout):
+            rc = cli_main(["whereisskill"])
+
+        self.assertEqual(0, rc)
+        out = stdout.getvalue()
+        self.assertIn("script-to-conti", out)
+        self.assertIn(str(ROOT / ".agents" / "skills" / "script-to-conti" / "SKILL.md"), out)
+        self.assertIn(str(ROOT / ".claude" / "skills" / "script-to-conti" / "SKILL.md"), out)
+
+    def test_cli_whereisskill_json_is_machine_readable(self) -> None:
+        stdout = io.StringIO()
+        with patch("sys.stdout", stdout):
+            rc = cli_main(["whereisskill", "--json"])
+
+        self.assertEqual(0, rc)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual("script-to-conti", payload["skill"])
+        self.assertEqual(
+            str(ROOT / ".agents" / "skills" / "script-to-conti" / "SKILL.md"),
+            payload["paths"]["codex"],
+        )
+
     def test_typecast_payload_attaches_emotion_only_for_known_non_normal_preset(self) -> None:
         from weft.providers.typecast_tts import TypecastTTS
 

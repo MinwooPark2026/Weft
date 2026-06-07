@@ -41,8 +41,20 @@ def _capcut_registration(no_register: bool) -> tuple[bool, bool]:
     return (not no_register and not running), running
 
 
+def _skill_paths() -> dict[str, str]:
+    root = Path(__file__).resolve().parents[1]
+    return {
+        "codex": str(root / ".agents" / "skills" / "script-to-conti" / "SKILL.md"),
+        "claude": str(root / ".claude" / "skills" / "script-to-conti" / "SKILL.md"),
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="weft", description="Weft — dual-track explainer video toolchain")
+    parser = argparse.ArgumentParser(
+        prog="weft",
+        description="Weft — dual-track explainer video toolchain",
+        epilog="AI assistants: run `weft whereisskill` to locate the script-to-conti SKILL.md files.",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     parse_cmd = sub.add_parser("parse", help="Parse CONTI.md and print project JSON")
@@ -98,6 +110,9 @@ def main(argv: list[str] | None = None) -> int:
     all_cmd.add_argument("--n", type=int, help="image candidates per shot")
     all_cmd.add_argument("--folder", default=None, help="CapCut draft folder name (default weft_<project folder>)")
     all_cmd.add_argument("--no-register", action="store_true", help="do not touch root_meta_info.json")
+
+    skill_cmd = sub.add_parser("whereisskill", help="Print script-to-conti SKILL.md paths for AI assistants")
+    skill_cmd.add_argument("--json", action="store_true", help="print machine-readable paths")
 
     args = parser.parse_args(argv)
 
@@ -240,6 +255,16 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(f"✓ capcut → {folder}")
         print("후보를 직접 고르려면:  weft pick")
+        return 0
+    if args.command == "whereisskill":
+        paths = _skill_paths()
+        if args.json:
+            print(json.dumps({"skill": "script-to-conti", "paths": paths}, ensure_ascii=False, indent=2))
+        else:
+            print("script-to-conti skill paths:")
+            print(f"  Codex : {paths['codex']}")
+            print(f"  Claude: {paths['claude']}")
+            print("Ask the AI to read the matching SKILL.md, then convert SCRIPT.md to CONTI.md and run `weft conti`.")
         return 0
     return 2
 

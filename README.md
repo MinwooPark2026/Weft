@@ -65,10 +65,17 @@ editable 설치라서 weft는 어느 작업 디렉터리에서든 이 `.env`를 
 - Claude용: `.claude/skills/script-to-conti/`
 - Codex용: `.agents/skills/script-to-conti/`
 
+터미널에서 스킬 파일 위치를 확인하려면:
+
+```bash
+weft whereisskill
+```
+
 예시 요청:
 
 ```text
 이 대본을 script-to-conti 스킬로 Weft CONTI.md로 바꿔줘.
+스킬 위치는 `weft whereisskill`로 확인해서 SKILL.md를 읽어줘.
 검증은 weft conti까지 돌려서 validation_errors=0이 되게 해줘.
 ```
 
@@ -102,6 +109,7 @@ weft images           # OpenAI 이미지 후보
 weft pick             # 로컬 브라우저 picker
 weft capcut           # CapCut 드래프트 빌더
 weft all              # conti -> tts -> images -> capcut
+weft whereisskill     # AI에게 읽힐 script-to-conti 스킬 경로 출력
 ```
 
 conti의 입력은 기본값이 `./CONTI.md`, tts/images/pick/capcut의 프로젝트 디렉터리는 기본값이 `./generated_project`입니다. 파워 유저는 경로를 명시적으로 넘길 수도 있습니다.
@@ -233,10 +241,17 @@ If you already have prose script input (`SCRIPT.md`, etc.), first ask the AI ass
 - Claude: `.claude/skills/script-to-conti/`
 - Codex: `.agents/skills/script-to-conti/`
 
+To print the skill file paths from a terminal:
+
+```bash
+weft whereisskill
+```
+
 Example prompt:
 
 ```text
 Use the script-to-conti skill to convert this script into a Weft CONTI.md.
+Find the SKILL.md path with `weft whereisskill` and read it first.
 Run weft conti and iterate until validation_errors=0.
 ```
 
@@ -270,6 +285,7 @@ weft images           # OpenAI image candidates
 weft pick             # local browser picker
 weft capcut           # CapCut draft builder
 weft all              # conti -> tts -> images -> capcut
+weft whereisskill     # print script-to-conti skill paths for AI assistants
 ```
 
 conti's CONTI source defaults to `./CONTI.md`; tts/images/pick/capcut default their project dir to `./generated_project`. Power users can still pass paths explicitly.
