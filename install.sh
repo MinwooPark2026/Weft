@@ -37,8 +37,12 @@ fi
 case ":$PATH:" in
   *":$BIN:"*) : ;;
   *)
-    echo "⚠ $BIN 이 PATH 에 없습니다 → ~/.zshrc 에 추가합니다."
-    printf '\n# weft\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$HOME/.zshrc"
+    if grep -qs '^# weft$' "$HOME/.zshrc" 2>/dev/null; then
+      echo "⚠ $BIN 이 현재 PATH 에 없습니다. ~/.zshrc 에는 이미 weft PATH 설정이 있습니다."
+    else
+      echo "⚠ $BIN 이 PATH 에 없습니다 → ~/.zshrc 에 추가합니다."
+      printf '\n# weft\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$HOME/.zshrc"
+    fi
     echo "  새 터미널을 열거나  source ~/.zshrc  실행 후 사용하세요."
     ;;
 esac

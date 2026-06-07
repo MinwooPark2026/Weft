@@ -28,6 +28,19 @@ def _missing_project(path: str) -> str | None:
     return f"'{path}' 폴더가 없습니다. 먼저 'weft conti' 로 프로젝트를 생성하세요."
 
 
+def _default_capcut_folder(project_dir: str | Path) -> str:
+    path = Path(project_dir).resolve()
+    project_name = path.parent.name if path.name == DEFAULT_PROJECT else path.name
+    return f"weft_{project_name or Path.cwd().name or 'project'}"
+
+
+def _capcut_registration(no_register: bool) -> tuple[bool, bool]:
+    from .exporters.capcut_draft import capcut_running
+
+    running = capcut_running()
+    return (not no_register and not running), running
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="weft", description="Weft — dual-track explainer video toolchain")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -84,6 +97,7 @@ def main(argv: list[str] | None = None) -> int:
     all_cmd.add_argument("--out", default=DEFAULT_PROJECT)
     all_cmd.add_argument("--n", type=int, help="image candidates per shot")
     all_cmd.add_argument("--folder", default=None, help="CapCut draft folder name (default weft_<project folder>)")
+    all_cmd.add_argument("--no-register", action="store_true", help="do not touch root_meta_info.json")
 
     args = parser.parse_args(argv)
 
@@ -174,7 +188,8 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         from .exporters.capcut_draft import build_capcut_draft
 
-        folder = args.folder or f"weft_{Path.cwd().name}"
+        folder = args.folder or _default_capcut_folder(args.project_dir)
+        register, running = _capcut_registration(args.no_register)
         summary = build_capcut_draft(
             args.project_dir,
             folder_name=folder,
@@ -183,8 +198,10 @@ def main(argv: list[str] | None = None) -> int:
             with_audio=not args.no_audio,
             images_only=args.images_only,
             limit=args.limit,
-            register=not args.no_register,
+            register=register,
         )
+        summary["capcut_running"] = running
+        summary["folder_name"] = folder
         print(json.dumps(summary, ensure_ascii=False))
         return 0
     if args.command == "pick":
@@ -215,9 +232,13 @@ def main(argv: list[str] | None = None) -> int:
         print("✓ tts")
         generate_images(args.out, n=args.n)
         print("✓ images")
-        folder = args.folder or f"weft_{Path.cwd().name}"
-        build_capcut_draft(args.out, folder_name=folder)
-        print(f"✓ capcut → {folder}")
+        folder = args.folder or _default_capcut_folder(args.out)
+        register, running = _capcut_registration(args.no_register)
+        build_capcut_draft(args.out, folder_name=folder, register=register)
+        if running and not args.no_register:
+            print(f"✓ capcut → {folder} (CapCut 실행 중이라 등록 생략)")
+        else:
+            print(f"✓ capcut → {folder}")
         print("후보를 직접 고르려면:  weft pick")
         return 0
     return 2

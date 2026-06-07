@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 import json
 import shutil
-import subprocess
 import threading
 import urllib.parse
 import webbrowser
@@ -11,6 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from ..assets import append_candidates, recompile_exports, _sync_shot_prompt
+from ..exporters.capcut_draft import capcut_running
 
 HTML_PATH = Path(__file__).resolve().parent / "picker.html"
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
@@ -101,13 +101,6 @@ def _add_external(project_dir: Path, shot_id: str, data: bytes) -> str:
     return name
 
 
-def _capcut_running() -> bool:
-    try:
-        return subprocess.run(["pgrep", "-x", "CapCut"], capture_output=True).returncode == 0
-    except Exception:
-        return False
-
-
 # ---------------------------------------------------------------- handler ---
 
 def _make_handler(project_dir: Path):
@@ -193,13 +186,14 @@ def _make_handler(project_dir: Path):
                                      "candidates": _candidates(project_dir, b["shot_id"])}); return
                 if path == "/api/build":
                     from ..exporters.capcut_draft import build_capcut_draft
+                    from ..cli import _default_capcut_folder
                     recompile_exports(project_dir)
-                    running = _capcut_running()
-                    folder = f"weft_{project_dir.parent.name}"
+                    running = capcut_running()
+                    folder = _default_capcut_folder(project_dir)
                     res = build_capcut_draft(project_dir, folder_name=folder,
                                              register=not running)
                     res["capcut_running"] = running
-                    res["folder"] = folder
+                    res["folder_name"] = folder
                     self._json(200, {"ok": True, **res}); return
                 self.send_error(404)
             except Exception as e:

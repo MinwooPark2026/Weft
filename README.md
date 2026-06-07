@@ -23,6 +23,7 @@ Weft는 긴 호흡의 설명형 영상을 위한 **이중 트랙(dual-track) 워
 - `uninstall.sh`: 제거 스크립트 (`weft` 명령·venv 제거, `.env`는 보존)
 - `weft/`: 파이썬 CLI와 핵심 파이프라인
 - `.claude/skills/script-to-conti/`: 대본을 Weft 이중 트랙 `CONTI.md`로 바꾸는 스킬
+- `.agents/skills/script-to-conti/`: Codex에서도 같은 스킬을 쓰기 위한 미러
 - `weft/picker/`: 로컬 이미지 후보 선택기(picker)
 - `STYLE_GUIDE.md`: 이미지 스타일 커스터마이즈 가이드
 - `WORKFLOW.html`: 시각적 워크플로우 개요
@@ -56,6 +57,20 @@ editable 설치라서 weft는 어느 작업 디렉터리에서든 이 `.env`를 
 ```
 
 `weft` 명령(심볼릭 링크)·venv·빌드 산물을 지웁니다. 키가 든 `.env`는 **보존**됩니다(완전히 지우려면 안내대로 직접 삭제).
+
+### 대본을 CONTI.md로 바꾸기
+
+산문 대본(`SCRIPT.md` 등)이 있으면 먼저 AI 어시스턴트에게 **`script-to-conti` 스킬을 사용해서 Weft `CONTI.md`로 변환**하라고 요청하세요. 이 스킬은 한 문장마다 이미지를 하나씩 만들지 않고, `▶` 새 그림·`↓` 홀드·`▦` 몽타주·`↺` 재사용 같은 이중 트랙 지시를 넣어 이미지 수를 줄이는 콘티를 만듭니다.
+
+- Claude용: `.claude/skills/script-to-conti/`
+- Codex용: `.agents/skills/script-to-conti/`
+
+예시 요청:
+
+```text
+이 대본을 script-to-conti 스킬로 Weft CONTI.md로 바꿔줘.
+검증은 weft conti까지 돌려서 validation_errors=0이 되게 해줘.
+```
 
 ### 빠른 시작
 
@@ -91,6 +106,8 @@ weft all              # conti -> tts -> images -> capcut
 
 conti의 입력은 기본값이 `./CONTI.md`, tts/images/pick/capcut의 프로젝트 디렉터리는 기본값이 `./generated_project`입니다. 파워 유저는 경로를 명시적으로 넘길 수도 있습니다.
 
+`weft capcut`와 `weft all`은 `--no-register`로 CapCut 목록 등록을 건너뛸 수 있습니다(드래프트 파일만 생성).
+
 다른 프로젝트 폴더 사용 — 그냥 그 폴더로 `cd`하세요:
 
 ```bash
@@ -106,7 +123,7 @@ weft images --n 3
 
 ### Script-To-Conti 스킬
 
-AI 어시스턴트로 대본을 Weft `CONTI.md`로 변환하고 싶을 때 `.claude/skills/script-to-conti/`를 사용하세요.
+AI 어시스턴트로 대본을 Weft `CONTI.md`로 변환할 때는 `script-to-conti` 스킬을 사용하세요. Claude에서는 `.claude/skills/script-to-conti/`, Codex에서는 `.agents/skills/script-to-conti/`가 같은 내용을 제공합니다.
 
 이 스킬의 출력:
 
@@ -147,7 +164,7 @@ weft images
 
 - `conti`를 다시 실행하면 `generated_project`가 새로 만들어지고 픽이 초기화됩니다.
 - picker로 고른 뒤에는, 프로젝트를 의도적으로 다시 만들 게 아니라면 `capcut`만 바로 실행하세요.
-- `weft capcut`은 **CapCut이 바로 여는 드래프트(프로젝트)**를 만들어 CapCut 목록에 등록합니다. 등록은 CapCut의 프로젝트 목록 파일(`root_meta_info.json`)을 고치는데, **CapCut이 켜져 있으면 종료할 때 그 파일을 자기 메모리로 덮어써 새 드래프트가 사라집니다.** 그래서 빌드는 CapCut을 종료한 상태에서 하세요. (켜진 채 실행하면 등록을 건너뛰고 파일만 만들어 둡니다 — CapCut을 껐다 켜야 목록에 보입니다.)
+- `weft capcut`은 **CapCut이 바로 여는 드래프트(프로젝트)**를 만들어 CapCut 목록에 등록합니다. 등록은 CapCut의 프로젝트 목록 파일(`root_meta_info.json`)을 고치는데, **CapCut이 켜져 있으면 종료할 때 그 파일을 자기 메모리로 덮어써 새 드래프트가 사라집니다.** 그래서 빌드는 CapCut을 종료한 상태에서 하세요. (켜진 채 실행하면 등록을 건너뛰고 파일만 만들어 둡니다 — CapCut을 종료한 뒤 `weft capcut`을 다시 실행하면 목록에 등록됩니다.)
 
 ### 라이선스
 
@@ -174,6 +191,7 @@ This lets one visual cover multiple narration beats, or one narration beat use s
 - `uninstall.sh`: uninstaller (removes the `weft` command and venv; keeps `.env`)
 - `weft/`: Python CLI and core pipeline
 - `.claude/skills/script-to-conti/`: skill for turning a script into a Weft dual-track `CONTI.md`
+- `.agents/skills/script-to-conti/`: Codex mirror of the same skill
 - `weft/picker/`: local image candidate picker
 - `STYLE_GUIDE.md`: image style customization guide
 - `WORKFLOW.html`: visual workflow overview
@@ -207,6 +225,20 @@ To cleanly undo the install, run inside the repo:
 ```
 
 It removes the `weft` command (symlink), the venv, and build artifacts. Your `.env` (with keys) is **kept**.
+
+### Turn A Script Into CONTI.md
+
+If you already have prose script input (`SCRIPT.md`, etc.), first ask the AI assistant to **use the `script-to-conti` skill and convert it into a Weft `CONTI.md`**. The skill writes dual-track visual directives such as `▶` new image, `↓` hold, `▦` montage, and `↺` reuse, so the result does not default to one image per sentence.
+
+- Claude: `.claude/skills/script-to-conti/`
+- Codex: `.agents/skills/script-to-conti/`
+
+Example prompt:
+
+```text
+Use the script-to-conti skill to convert this script into a Weft CONTI.md.
+Run weft conti and iterate until validation_errors=0.
+```
 
 ### Quick Start
 
@@ -242,6 +274,8 @@ weft all              # conti -> tts -> images -> capcut
 
 conti's CONTI source defaults to `./CONTI.md`; tts/images/pick/capcut default their project dir to `./generated_project`. Power users can still pass paths explicitly.
 
+`weft capcut` and `weft all` accept `--no-register` to skip registering the draft in CapCut's list (the draft files are still written).
+
 Use another project folder — just `cd` into it:
 
 ```bash
@@ -257,7 +291,7 @@ weft images --n 3
 
 ### Script-To-Conti Skill
 
-Use `.claude/skills/script-to-conti/` when you want an AI assistant to convert a script into a Weft `CONTI.md`.
+Use the `script-to-conti` skill when you want an AI assistant to convert a script into a Weft `CONTI.md`. Claude reads `.claude/skills/script-to-conti/`; Codex reads `.agents/skills/script-to-conti/`.
 
 The skill outputs:
 
@@ -298,7 +332,7 @@ See `STYLE_GUIDE.md` for templates and examples.
 
 - Re-running `conti` rebuilds `generated_project` and resets picks.
 - After using the picker, run `capcut` directly unless you intentionally want to regenerate the project.
-- `weft capcut` builds a **CapCut-openable draft (project)** and registers it in CapCut's project list. Registration edits CapCut's project-list file (`root_meta_info.json`), and **if CapCut is running it overwrites that file from memory on quit, so a freshly registered draft disappears.** Build with CapCut closed. (If it's running, registration is skipped and only the files are written — relaunch CapCut to see the draft.)
+- `weft capcut` builds a **CapCut-openable draft (project)** and registers it in CapCut's project list. Registration edits CapCut's project-list file (`root_meta_info.json`), and **if CapCut is running it overwrites that file from memory on quit, so a freshly registered draft disappears.** Build with CapCut closed. (If it's running, registration is skipped and only the files are written — close CapCut and run `weft capcut` again to register it in the project list.)
 
 ### License
 

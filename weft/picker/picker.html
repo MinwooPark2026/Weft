@@ -219,7 +219,7 @@ async function build(){
     const r=await (await fetch('/api/build',{method:'POST'})).json();
     if(!r.ok)throw new Error(r.error);
     if(r.capcut_running) toast('⚠ CapCut 실행 중이라 등록 생략 — CapCut 종료 후 빌드하면 목록 갱신됨. 파일은 갱신됨('+r.video_segments+' video).','warn');
-    else toast('🎬 빌드+등록 완료 — CapCut에서 '+(r.folder||'draft')+' 열기 ('+r.video_segments+' video / '+r.audio_segments+' audio)');
+    else toast('🎬 빌드+등록 완료 — CapCut에서 '+(r.folder_name||'draft')+' 열기 ('+r.video_segments+' video / '+r.audio_segments+' audio)');
   }catch(e){toast('빌드 실패: '+e.message,'err');}
   finally{S.busy=false;overlay(false);$('build-btn').disabled=false;}
 }

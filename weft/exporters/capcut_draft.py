@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 import time
 import uuid
 from pathlib import Path
@@ -32,6 +33,13 @@ DEFAULT_ROOT = Path.home() / "Movies/CapCut/User Data/Projects/com.lveditor.draf
 ZOOM_RATIO = 1.12  # zoom_in/out scale change over the clip
 PAN_SHIFT = 0.10   # pan position offset in half-canvas units
 FADE_US = 500_000  # fade-in length
+
+
+def capcut_running() -> bool:
+    try:
+        return subprocess.run(["pgrep", "-x", "CapCut"], capture_output=True).returncode == 0
+    except Exception:
+        return False
 
 
 def us(samples: int, sample_rate: int = 48_000) -> int:

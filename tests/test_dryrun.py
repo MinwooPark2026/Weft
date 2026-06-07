@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 import os
 import tempfile
@@ -7,6 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from weft.cli import _default_capcut_folder, main as cli_main
 from weft.assets import generate_images, load_style
 from weft.compiler import compile_render_plan
 from weft.exporters.capcut_draft import build_capcut_draft
@@ -198,6 +200,41 @@ class DryRunTest(unittest.TestCase):
             self.assertTrue(backup.exists())
             self.assertEqual("keep me", (backup / "marker.txt").read_text(encoding="utf-8"))
             self.assertTrue((capcut_root / "review" / "draft_info.json").exists())
+
+    def test_cli_default_capcut_folder_uses_project_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project_dir = Path(tmp) / "episode-3" / "generated_project"
+            project_dir.mkdir(parents=True)
+            self.assertEqual("weft_episode-3", _default_capcut_folder(project_dir))
+
+    def test_cli_capcut_skips_registration_when_capcut_is_running(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project_dir = Path(tmp) / "episode-3" / "generated_project"
+            project_dir.mkdir(parents=True)
+            fake_summary = {"folder": "/fake/capcut/weft_episode-3", "registered": False}
+            stdout = io.StringIO()
+            with patch("weft.exporters.capcut_draft.capcut_running", return_value=True):
+                with patch("weft.exporters.capcut_draft.build_capcut_draft", return_value=fake_summary) as build:
+                    with patch("sys.stdout", stdout):
+                        rc = cli_main(["capcut", str(project_dir)])
+
+            self.assertEqual(0, rc)
+            build.assert_called_once()
+            self.assertEqual("weft_episode-3", build.call_args.kwargs["folder_name"])
+            self.assertFalse(build.call_args.kwargs["register"])
+            out = json.loads(stdout.getvalue())
+            self.assertTrue(out["capcut_running"])
+            self.assertEqual("weft_episode-3", out["folder_name"])
+
+    def test_agents_skill_mirrors_claude_skill(self) -> None:
+        claude = ROOT / ".claude" / "skills" / "script-to-conti" / "SKILL.md"
+        agents = ROOT / ".agents" / "skills" / "script-to-conti" / "SKILL.md"
+        self.assertTrue(claude.is_file() and agents.is_file())
+        self.assertEqual(
+            claude.read_text(encoding="utf-8"),
+            agents.read_text(encoding="utf-8"),
+            ".agents mirror drifted from .claude — keep the two SKILL.md identical",
+        )
 
 
 if __name__ == "__main__":
