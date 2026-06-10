@@ -78,7 +78,7 @@
 | p007 | ⏸ 1초 | 7:00~7:01 | *(정적)* |  | 호흡 |
 | b059 | ▶ s36_opposite | 7:01~7:10 | 그런데 이 논문은 정반대로 갔어요. 순서대로 읽기를 통째로 버린 거예요. | 정반대로: 순서대로 읽기를 버렸다 | 외길 화살표가 끊기고 사라지는 전환 |
 | b060 | ▶ s37_all_at_once | 7:10~7:19 | 대신 — 문장 안의 모든 단어가, 동시에, 서로를 쳐다보게 만들었습니다. | 모든 단어가 동시에 서로를 본다 | 모든 단어가 동시에 켜지고 단어 사이 선이 한꺼번에 그어짐 |
-| b061 | ▶ s38_attn_heatmap | 7:19~7:30 | 예를 들어볼게요. "그 동물은 길을 건너지 않았다, 너무 피곤했기 때문에." 여기서 '그것(it)'은 뭘 가리킬까요? | "그 동물은…너무 피곤했기 때문에" — '그것'은? | 어텐션 히트맵: 한글 문장 1초 후 영어로 디졸브. 'it'-'animal' 라벨 |
+| b061 | ▶ s38_attn_heatmap | 7:19~7:30 | 예를 들어볼게요. "그 동물은 길을 건너지 않았다, 너무 피곤했기 때문에." 여기서 '그것(it)'은 뭘 가리킬까요? | "그 동물은…너무 피곤했기 때문에" — '그것'은? | 어텐션 도식: 단어 모양 블록 행 + 연결선. 문장 자체는 자막이 전달 (이미지에 글자 없음) |
 | b062 | ↓ | 7:30~7:36 | 동물이죠. 사람은 그냥 압니다. 그런데 기계는 이걸 어떻게 알까요. | 사람은 그냥 안다. 기계는? | (홀드, 같은 히트맵) |
 | b063 | ⤴ s38_attn_heatmap.2 | 7:36~7:48 | 어텐션은 'it', 그러니까 '그것'이라는 단어가 문장 안 모든 단어를 한 번에 둘러보고, '동물'이라는 단어에 가장 강하게 주목하게 만들어요. | 'it'이 모든 단어를 둘러보고 '동물'에 가장 주목 | it에서 여러 단어로 가는 선 중 'animal' 선이 가장 진해짐 |
 | b064 | ↓ | 7:48~7:56 | 이 히트맵에서 진하게 빛나는 선이 그 '주목'이에요. 기계가 어디를 보고 있는지가 눈에 보이는 거죠. | 빛나는 선 = '주목'. 기계의 시선이 보인다 | (홀드, 진한 선 유지) |
@@ -166,7 +166,7 @@
 | s35_rnn_fade | image | b055~b058 | sequential light-up + fade (build-up b057, b058) | Words in a sentence lighting up one by one from the left; each new word lights while earlier words fade dimmer, so by the end the first word is nearly invisible (RNN sequential reading + forgetting), clean diagram |
 | s36_opposite | image | b059 | break/dissolve | The one-way arrow breaking apart and dissolving, signaling the abandonment of sequential reading, clean conceptual transition |
 | s37_all_at_once | image | b060 | simultaneous light-up | All words in a sentence lighting up simultaneously while lines are drawn between every pair of words at once, dense connection web, clean diagram |
-| s38_attn_heatmap | image | b061~b065 | dissolve + line glow (build-up b063) | An attention heatmap over a sentence: a Korean sentence shown briefly then dissolving into the English sentence; faint connection lines from the word 'it' to all words, with the line to 'animal' glowing strongest; only 'it' and 'animal' subtly marked, clean diagram |
+| s38_attn_heatmap | image | b061~b065 | dissolve + line glow (build-up b063) | An abstract attention diagram: a horizontal row of soft word-shaped blocks forming a sentence, faint curved connection lines rising from one highlighted block near the end toward every other block, the single line reaching one distant block glowing far brighter than the rest, clean minimal diagram, absolutely no text, letters, numbers or labels |
 | s39_two_fixed | image | b066~b068 | checks light up | Two problem-icons (a slow snail/clock for "slow" and a fading-memory symbol for "forgetting") each getting a check mark lighting up, meaning both fixed at once, clean diagram |
 | s40_bleu_card | text_card | b069~b071 | 도장 찍힘 | 한국어 문구: BLEU = 번역 품질 점수 (↑ 사람 번역에 가까움) · 영→독 28.4 / 영→불 41.8 · "당시 1위" 도장 · GPU 8장, 3.5일 |
 | s41_most_important | image | b072 | marker pop | An emphasis marker / highlight starburst appearing in the center of empty negative space, signaling "this is the most important point", warm minimal |

@@ -89,14 +89,14 @@ Style: soft hand-painted watercolor storybook illustration with gentle wet-on-we
 ```
 </details>
 
-<details><summary><b>레트로 리소그래프</b> — 레트로/인디 감성, 문화·역사·예술·사회 인사이트 채널이나 따뜻하고 손맛 있는 톤을 원하는 논문 설명 영상에 적합</summary>
+<details><summary><b>레트로 리소그래프</b> — 레트로/인디 감성, 문화·역사·예술·사회 인사이트 채널이나 따뜻하고 손맛 있는 톤을 원하는 설명 영상에 적합</summary>
 
 ```
 Style: retro risograph / silkscreen print illustration with a strictly limited 3-ink palette — Riso-style cobalt blue, fluorescent pink (lean warm toward fluo-orange), and mustard yellow, printed on a warm beige off-white paper stock; flat solid color fills with NO smooth gradients, built up from visible halftone dot screens and fine paper grain; bold simple diagrammatic shapes with slightly rough hand-printed edges; subtle 1-2mm misregistration where ink layers overlap, with multiply-style overprint creating a darker third color in overlaps; balanced mix of accurate schematic diagrams and conceptual metaphor imagery rendered as flat iconic forms; no human figures (concepts, objects, and metaphors only); generous negative space on the bare paper; warm, nostalgic indie-print mood that still reads calm and clear for explainer content; consistent ink colors, dot density, and grain across every frame; 16:9; no text, letters, or numbers inside the generated image.
 ```
 </details>
 
-<details><summary><b>블루프린트/테크니컬</b> — 공학·기술·구조·시스템 설계나 논문의 메커니즘을 정밀하게 해부해 보여주는 테크/엔지니어링 설명 채널에 적합</summary>
+<details><summary><b>블루프린트/테크니컬</b> — 공학·기술·구조·시스템의 메커니즘을 정밀하게 해부해 보여주는 테크/엔지니어링 설명 채널에 적합</summary>
 
 ```
 Style: technical blueprint / engineering schematic illustration with precise drafting clarity; deep navy / Prussian-blue background (blueprint paper look) with a faint regular grid; line art in ice-white and cyan with crisp, consistent thin-to-medium line weight, fine hairline construction lines, section/exploded-view and dimension-line motifs (tick marks, leader lines, callout dots, arc guides — as graphic motifs only); cool, exacting, trustworthy mood with subtle vignette and faint paper texture; mostly accurate schematic diagrams with occasional concepts translated into the same drafting language (roughly 7:3 schematic-to-metaphor); no human figures (structures, objects, and concepts only); flat technical look with minimal shading, glow restrained; 16:9; no text, letters, or numbers inside the generated image.

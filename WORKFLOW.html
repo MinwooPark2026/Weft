@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Weft 워크플로우 — 대본에서 영상까지</title>
+<title>Weft 워크플로우 — 내 대본에서 MP4까지</title>
 <style>
   :root{
     --cream:#faf6ee; --card:#fffdf8; --ink:#2f2a22; --muted:#7c7567;
@@ -72,13 +72,12 @@
 
 <header>
   <h1>Weft 워크플로우</h1>
-  <p class="sub">대본 한 편 → 캡컷에서 열리는 영상까지. 자동 / 사람 / <b style="color:var(--ai)">AI</b>가 어디에 들어가나.</p>
+  <p class="sub">내가 쓴 대본 한 편 → 완성 MP4까지. 자동 / 사람 / <b style="color:var(--ai)">AI</b>가 어디에 들어가나.</p>
 </header>
 
 <div class="meta">
-  <span class="pill">정보형 · 논문 설명 영상</span>
-  <span class="pill">샘플: <b>AI 논문 (AlexNet + Transformer)</b></span>
-  <span class="pill">길이 <b>9.2분</b></span>
+  <span class="pill">주제 불문 — <b>역사 · 과학 · 문화 분석 · 사고실험 · 철학 비교 …</b></span>
+  <span class="pill">예시 프로젝트(example/): AI 논문 설명, <b>9.2분</b></span>
   <span class="pill">나레이션 92 · 이미지 44 · 카드 9 · 자막 93</span>
 </div>
 
@@ -93,12 +92,12 @@
 <h2>① 파이프라인 (대본 → 영상)</h2>
 
 <!-- 0 -->
-<div class="stage gate aistage">
+<div class="stage gate">
   <div class="row"><div class="num">0</div><div class="body">
-    <h3>대본 작성 <span class="badge b-human">사람</span> <span class="badge b-ai">🤖 AI 보조</span> <span class="cmd na">weft 명령 없음</span> <span class="tool">멀티에이전트(Claude)</span></h3>
-    <div class="desc">무엇을, 어떤 톤으로 말할지 산문 대본. <b>AI 활용:</b> Claude 멀티에이전트 워크플로우가 논문 후보를 고르고 초안을 쓰고 <b>적대적 팩트체크</b>까지 (사람이 최종 손봄·승인).</div>
-    <div class="io"><span class="lab">OUT</span><span class="arrow">→</span><span class="chip">example/SCRIPT.md</span></div>
-    <span class="aitag">🤖 AI: 논문 선정 · 초안 · 팩트체크</span> <span class="gatetag">🚪 대본 승인</span>
+    <h3>대본 작성 <span class="badge b-human">사람</span> <span class="cmd na">Weft 범위 밖 · weft 명령 없음</span></h3>
+    <div class="desc"><b>사용자가 직접 쓴 산문 대본(.md)</b>이 Weft의 입력. 주제는 자유 — 역사, 과학, 문화 분석, 사고실험, 철학 비교 등 무엇이든. "주제 → 대본" 단계는 Weft가 관여하지 않는다 (어떻게 쓰든 자유).</div>
+    <div class="io"><span class="lab">OUT</span><span class="arrow">→</span><span class="chip">SCRIPT.md (예시: example/SCRIPT.md)</span></div>
+    <span class="gatetag">🚪 대본 확정</span>
   </div></div>
 </div>
 <div class="connector"></div>
@@ -129,8 +128,8 @@
 <div class="stage aistage">
   <div class="row"><div class="num">3</div><div class="body">
     <h3>나레이션 TTS <span class="badge b-ai">🤖 AI</span> <span class="cmd">weft tts</span> <span class="tool">Typecast ssfm-v30</span></h3>
-    <div class="desc"><b>AI 활용:</b> 신경망 TTS가 비트 92개를 음성으로(보이스 Seohyeon). 실측 길이를 재서 타임라인 마스터 클럭으로. 캐시·재시도·실패 격리.</div>
-    <div class="io"><span class="lab">IN</span><span class="chip">NARRATION.json</span><span class="arrow">→</span><span class="lab">OUT</span><span class="chip">AUDIO/beats/*.wav (92)</span></div>
+    <div class="desc"><b>AI 활용:</b> 신경망 TTS가 나레이션 비트를 음성으로(예시 92개, 보이스 Seohyeon). 실측 길이를 재서 타임라인 마스터 클럭으로. 캐시·재시도·실패 격리.</div>
+    <div class="io"><span class="lab">IN</span><span class="chip">NARRATION.json</span><span class="arrow">→</span><span class="lab">OUT</span><span class="chip">AUDIO/beats/*.wav</span></div>
     <span class="aitag">🤖 AI: 음성 합성</span> <span style="font-size:12px;color:var(--muted);margin-left:6px">사람: 보이스 1회 선택</span>
   </div></div>
 </div>
@@ -140,19 +139,20 @@
 <div class="stage gate aistage">
   <div class="row"><div class="num">4</div><div class="body">
     <h3>이미지 생성 + 픽 <span class="badge b-ai">🤖 AI</span> <span class="badge b-human">사람 선택</span> <span class="cmd">weft images</span> <span class="cmd">weft pick</span> <span class="tool">OpenAI gpt-image-1</span></h3>
-    <div class="desc"><b>AI 활용:</b> 생성 모델이 image shot 44개를 공유 Style 접미사(STYLE.txt, 기본 3b1b — 도식 + 웜 라이트 + 문자 없음)로 생성. shot당 후보 N장 → 자동 기본픽. <b>사람 선택은 전용 picker로</b> (아래 ②).</div>
-    <div class="io"><span class="lab">IN</span><span class="chip">VISUALS.json(프롬프트)</span><span class="arrow">→</span><span class="lab">OUT</span><span class="chip">SHOTS/*/images/openai/*.png</span><span class="chip">PICKS.json</span></div>
-    <span class="aitag">🤖 AI: 이미지 생성</span> <span class="gatetag">🚪 picker로 후보 선택 + QC</span>
+    <div class="desc"><b>AI 활용:</b> 생성 모델이 image shot(예시 44개)을 공유 Style 접미사(STYLE.txt, 기본 3b1b — 도식 + 웜 라이트 + 문자 없음)로 생성. shot당 후보 N장 → 자동 기본픽. <b>사람 선택은 전용 picker로</b> (아래 ②).</div>
+    <div class="io"><span class="lab">IN</span><span class="chip">VISUALS.json(프롬프트)</span><span class="arrow">→</span><span class="lab">OUT</span><span class="chip">SHOTS/*/images/gen/*.png</span><span class="chip">PICKS.json</span></div>
+    <span class="aitag">🤖 AI: 이미지 생성</span> <span class="gatetag">🚪 picker로 후보 선택 + QC (선택 — 자동 기본픽으로도 진행)</span>
   </div></div>
 </div>
 <div class="connector"></div>
 
 <!-- 5 -->
-<div class="stage">
+<div class="stage aistage">
   <div class="row"><div class="num">5</div><div class="body">
-    <h3>텍스트 카드 렌더 <span class="badge b-auto">AUTO</span> <span class="cmd na">weft capcut에 포함</span> <span class="tool">Pillow</span></h3>
-    <div class="desc">생성 이미지엔 문자 금지 → 인용·숫자 카드(7+2)는 한국어 타이포 PNG로 렌더(어두운 배경+크림+앰버). 문구는 CARDS.json. (AI 아님 — 폰트 렌더링)</div>
-    <div class="io"><span class="lab">IN</span><span class="chip">CARDS.json</span><span class="arrow">→</span><span class="lab">OUT</span><span class="chip">카드 PNG 9장</span></div>
+    <h3>애니메이션 샷 (있을 때만) <span class="badge b-auto">AUTO</span> <span class="badge b-ai">🤖 AI 렌더</span> <span class="cmd">weft animate</span> <span class="tool">Remotion · HyperFrame</span></h3>
+    <div class="desc">콘티에 <b>remotion/hyperframe</b> shot(숫자 변화·도표·수식 전개)이 있으면 shot별 <span class="chip">animation/SPEC.md</span>를 만들고, AI 에이전트가 렌더해 둔 <span class="chip">rendered/clip.mp4</span>를 검사. 렌더된 clip은 일반 clip처럼 타임라인에 들어간다. 해당 shot이 없으면 건너뜀.</div>
+    <div class="io"><span class="lab">IN</span><span class="chip">VISUALS.json</span><span class="arrow">→</span><span class="lab">OUT</span><span class="chip">SHOTS/*/rendered/clip.mp4</span></div>
+    <span class="aitag">🤖 AI: SPEC.md 기반 애니메이션 clip 렌더</span>
   </div></div>
 </div>
 <div class="connector"></div>
@@ -160,9 +160,9 @@
 <!-- 6 -->
 <div class="stage">
   <div class="row"><div class="num">6</div><div class="body">
-    <h3>타임라인 컴파일 <span class="badge b-auto">AUTO</span> <span class="cmd na">weft conti에 포함</span><span class="cmdnote">tts·images가 갱신 (capcut은 읽기만)</span> <span class="tool">정수 타임(µs)</span></h3>
-    <div class="desc">실측 길이로 V/A/T 3트랙을 갭·드리프트 없이. 홀드/몽타주/reuse 펼침.</div>
-    <div class="io"><span class="lab">OUT</span><span class="chip">render_plan.json</span><span class="chip">subtitles.srt</span><span class="chip">capcut/timeline.csv</span></div>
+    <h3>텍스트 카드 렌더 <span class="badge b-auto">AUTO</span> <span class="cmd na">weft ffmpeg·capcut에 포함</span> <span class="tool">Pillow</span></h3>
+    <div class="desc">생성 이미지엔 문자 금지 → 인용·숫자 카드는 한국어 타이포 PNG로 렌더(어두운 배경+크림+앰버). 문구는 CARDS.json. ffmpeg 렌더와 CapCut 빌드 모두 같은 카드를 렌더한다. (AI 아님 — 폰트 렌더링)</div>
+    <div class="io"><span class="lab">IN</span><span class="chip">CARDS.json</span><span class="arrow">→</span><span class="lab">OUT</span><span class="chip">카드 PNG (예시 9장)</span></div>
   </div></div>
 </div>
 <div class="connector"></div>
@@ -170,33 +170,43 @@
 <!-- 7 -->
 <div class="stage">
   <div class="row"><div class="num">7</div><div class="body">
-    <h3>CapCut draft 빌드 <span class="badge b-auto">AUTO</span> <span class="cmd">weft capcut</span></h3>
-    <div class="desc">render_plan을 <b>캡컷이 바로 여는 프로젝트</b>로. 빈 draft 복제→세그먼트(56+92) 주입, <b>켄번스 모션</b> 키프레임, 에셋을 draft 안으로 복사(샌드박스). (AI 아님)</div>
-    <div class="io"><span class="lab">OUT</span><span class="chip">~/Movies/CapCut/.../weft_&lt;폴더이름&gt;/</span></div>
-    <span style="font-size:12px;color:var(--muted)">사람: 등록은 CapCut 종료 상태에서</span>
+    <h3>타임라인 컴파일 <span class="badge b-auto">AUTO</span> <span class="cmd na">weft conti에 포함</span><span class="cmdnote">tts·images가 갱신 (ffmpeg·capcut·fcpxml은 읽기만)</span> <span class="tool">정수 타임(µs)</span></h3>
+    <div class="desc">실측 길이로 V/A/T 3트랙을 갭·드리프트 없이. 홀드/몽타주/reuse 펼침.</div>
+    <div class="io"><span class="lab">OUT</span><span class="chip">render_plan.json</span><span class="chip">subtitles.srt</span><span class="chip">capcut/timeline.csv</span></div>
   </div></div>
 </div>
 <div class="connector"></div>
 
 <!-- 8 -->
-<div class="stage gate">
+<div class="stage">
   <div class="row"><div class="num">8</div><div class="body">
-    <h3>CapCut에서 편집 · 자막 · 렌더 <span class="badge b-human">사람</span> <span class="cmd na">CapCut 앱 · weft 없음</span></h3>
-    <div class="desc">draft 열기 → 자막 SRT import → 다듬기 → 최종 export. 긴 영상 렌더는 NLE가 빠름.</div>
-    <div class="io"><span class="lab">IN</span><span class="chip">draft + subtitles.srt</span><span class="arrow">→</span><span class="lab">OUT</span><span class="chip">완성 영상 🎬</span></div>
-    <span class="gatetag">🚪 최종 편집 · 발행</span>
+    <h3>MP4 렌더 — 기본 산출물 <span class="badge b-auto">AUTO</span> <span class="cmd">weft ffmpeg</span> <span class="tool">ffmpeg (videotoolbox → libx264 fallback)</span></h3>
+    <div class="desc">render_plan + 선택 이미지 + TTS WAV + 카드 PNG를 바로 <b>완성 MP4</b>로. 자막 기본 burn-in(<code>--no-subtitles</code>로 해제), <b>켄번스 모션</b> 적용. 화질·용량은 WEFT_SETTINGS.txt(또는 <code>--crf</code>·<code>--bitrate</code>)로. (AI 아님)</div>
+    <div class="io"><span class="lab">OUT</span><span class="chip">EXPORTS/weft_render.mp4</span> 🎬</div>
+  </div></div>
+</div>
+<div class="connector"></div>
+
+<!-- 9 -->
+<div class="stage gate">
+  <div class="row"><div class="num">9</div><div class="body">
+    <h3>[선택] NLE 핸드오프 · 최종 검수 <span class="badge b-human">사람</span> <span class="cmd">weft capcut</span> <span class="cmd">weft fcpxml</span></h3>
+    <div class="desc">MP4를 보고 더 다듬고 싶을 때만. <b>weft capcut</b>은 캡컷이 바로 여는 draft(세그먼트 주입·켄번스 키프레임·에셋 복사 — 등록은 CapCut 종료 상태에서), <b>weft fcpxml</b>은 Final Cut/Premiere/Resolve용 FCPXML. NLE에서 자막 SRT import → 다듬기 → 재렌더.</div>
+    <div class="io"><span class="lab">OUT</span><span class="chip">~/Movies/CapCut/.../weft_&lt;폴더이름&gt;/</span><span class="chip">EXPORTS/weft_timeline.fcpxml</span></div>
+    <span class="gatetag">🚪 최종 검수 · 발행</span>
   </div></div>
 </div>
 
 <h2>🤖 AI가 쓰이는 곳 (한눈에)</h2>
 <div class="callout">
   <ul>
-    <li><b>대본(0)</b> — Claude 멀티에이전트: 논문 선정 · 초안 · 적대적 팩트체크</li>
+    <li><b>대본(0)</b> — AI 아님: <b>사용자가 직접 쓴다</b> (Weft 범위 밖, 주제 자유)</li>
     <li><b>콘티(1)</b> — <b>script-to-conti 스킬(Claude/LLM)</b>: 대본을 컷으로 쪼개고 shot별 영문 이미지 프롬프트·모션 작성 ← <b>"대본을 콘티로 바꾸는" 핵심 AI 단계</b> (스킬 번들: <code>.claude/skills/script-to-conti/</code>)</li>
     <li><b>나레이션(3)</b> — Typecast 신경망 TTS: 텍스트 → 음성</li>
     <li><b>이미지(4)</b> — OpenAI gpt-image-1: 프롬프트 → 그림 (picker에서 추가 생성·프롬프트 수정도 AI)</li>
+    <li><b>애니메이션(5)</b> — AI 에이전트가 <code>SPEC.md</code>를 읽고 Remotion/HyperFrame clip 렌더 (해당 shot이 있을 때만)</li>
   </ul>
-  <p style="margin:10px 0 0;font-size:13.5px;color:#473f33">나머지(파싱·카드 렌더·타임라인 컴파일·CapCut 빌드)는 <b>결정적 코드</b>라 AI를 안 쓴다 — 그래서 결과가 매번 똑같고 디버깅이 쉽다.</p>
+  <p style="margin:10px 0 0;font-size:13.5px;color:#473f33">나머지(파싱·카드 렌더·타임라인 컴파일·ffmpeg MP4 렌더·CapCut/FCPXML 빌드)는 <b>결정적 코드</b>라 AI를 안 쓴다 — 그래서 결과가 매번 똑같고 디버깅이 쉽다.</p>
 </div>
 
 <h2>② 사진 후보 선택 — 이제 전용 picker로 (생략 해제됨)</h2>
@@ -207,37 +217,45 @@
     <li><span class="status s-have">AI 추가 생성</span> picker 안에서 <b>+ 생성</b> → 연결된 gpt-image-1으로 후보를 더 만든다.</li>
     <li><span class="status s-have">프롬프트 수정</span> 프롬프트를 고쳐 <b>저장</b>하거나 그 프롬프트로 바로 재생성.</li>
     <li><span class="status s-have">외부 이미지</span> 드래그&드롭 또는 파일 경로로 직접 넣기.</li>
-    <li><span class="status s-have">바로 빌드</span> picker의 <b>🎬 CapCut 빌드</b> 버튼으로 선택 반영해 draft 재생성.</li>
+    <li><span class="status s-have">선택 반영</span> 고른 픽은 PICKS.json에 저장 — <b>weft ffmpeg</b> 재실행이 그대로 반영. CapCut을 쓸 땐 picker의 <b>🎬 CapCut 빌드</b> 버튼으로 draft 재생성.</li>
     <li><span class="status s-skip">이전 상태</span> 처음엔 비용 위해 후보 1장(<code>--n 1</code>)이라 "선택"이 없었음 → <b>지금은 후보 2장</b> 생성, picker로 선택 가능.</li>
   </ul>
 </div>
 
 <h2>③ 사람의 손이 들어가는 곳</h2>
 <div class="twocol">
-  <div class="stage"><div class="body"><h3>🚪 대본 승인</h3><div class="desc" style="margin:0">무엇을·어떤 톤으로.</div></div></div>
+  <div class="stage"><div class="body"><h3>🚪 대본 작성·확정</h3><div class="desc" style="margin:0">직접 쓴다 — 무엇을·어떤 톤으로 (Weft 외부).</div></div></div>
   <div class="stage"><div class="body"><h3>🚪 콘티 검토</h3><div class="desc" style="margin:0">홀드/몽타주로 이미지 수 감축 확인.</div></div></div>
   <div class="stage"><div class="body"><h3>🚪 보이스 선택</h3><div class="desc" style="margin:0">샘플 듣고 1회.</div></div></div>
-  <div class="stage"><div class="body"><h3>🚪 이미지 픽 (picker)</h3><div class="desc" style="margin:0">후보 선택·재생성·외부 삽입.</div></div></div>
+  <div class="stage"><div class="body"><h3>🚪 이미지 픽 (picker)</h3><div class="desc" style="margin:0">후보 선택·재생성·외부 삽입 (선택).</div></div></div>
   <div class="stage"><div class="body"><h3>🚪 카드 문구</h3><div class="desc" style="margin:0">인용·숫자 카드 내용.</div></div></div>
-  <div class="stage"><div class="body"><h3>🚪 CapCut 최종</h3><div class="desc" style="margin:0">자막 import · 다듬기 · 발행.</div></div></div>
+  <div class="stage"><div class="body"><h3>🚪 최종 검수·발행</h3><div class="desc" style="margin:0">MP4 확인 — 더 다듬을 땐 CapCut/FCPXML 핸드오프.</div></div></div>
 </div>
 
 <h2>④ 명령어 (순서대로)</h2>
-<pre><span class="c"># 실행: 키는 .env (Typecast/OpenAI)</span>
-<span class="c"># 0~1. 대본·콘티 — AI(Claude) 보조로 작성 → SCRIPT.md, CONTI.md</span>
+<pre><span class="c"># 실행: 키는 .env (Typecast/OpenAI) · 렌더/화질 옵션은 WEFT_SETTINGS.txt</span>
+<span class="c"># 0. 대본 — 사용자가 직접 작성 (Weft 외부, 주제 자유) → SCRIPT.md</span>
+<span class="c"># 1. 콘티 — AI의 script-to-conti 스킬로 변환 → CONTI.md</span>
 <span class="c">#      (AI가 스킬 위치를 찾을 때:  weft whereisskill)</span>
 
 cd my-video                <span class="c"># CONTI.md가 든 프로젝트 폴더로 이동</span>
-weft conti                 <span class="c"># 2·6. 정본화·검증·타임라인 컴파일 (./CONTI.md → ./generated_project/)</span>
+weft conti                 <span class="c"># 2·7. 정본화·검증·타임라인 컴파일 (./CONTI.md → ./generated_project/)</span>
 weft tts                   <span class="g"># 3. 🤖 TTS</span>
 weft images --n 2          <span class="g"># 4. 🤖 이미지(후보 2장)</span>
-<span class="v">weft pick</span>                  <span class="c"># 4.5 🖼 picker (후보 선택·재생성·외부)</span>
-weft capcut                <span class="c"># 5·7. 카드 렌더·draft 빌드 (CapCut 종료 상태)</span>
+weft animate               <span class="g"># 5. 🤖 remotion/hyperframe shot이 있을 때만</span>
+weft ffmpeg                <span class="c"># 6·8. 카드 렌더·기본 MP4 → EXPORTS/weft_render.mp4 🎬</span>
 
-<span class="c"># 8. CapCut에서 draft 열기 → subtitles.srt import → 편집 → 렌더</span>
+<span class="c"># 한 번에 (conti → tts → images → animate check → ffmpeg):</span>
+weft all
+weft settings              <span class="c"># WEFT_SETTINGS.txt 생성/확인 (화질·인코더·export 옵션)</span>
+
+<span class="c"># 선택 — 더 다듬고 싶을 때</span>
+<span class="v">weft pick</span>                  <span class="c"># 🖼 picker (후보 선택·재생성·외부 이미지)</span>
+weft capcut                <span class="c"># 9. CapCut draft 핸드오프 (CapCut 종료 상태에서)</span>
+weft fcpxml                <span class="c"># 9. FCPXML 핸드오프 (Final Cut/Premiere/Resolve)</span>
 </pre>
 
-<footer>Weft · 정보형 영상 자동화 · AI(LLM·TTS·이미지) + 결정적 코드 + 휴먼 터치 게이트 · 최종 렌더는 CapCut 핸드오프</footer>
+<footer>Weft · 내 대본 → 영상 자동화 (주제 불문) · AI(LLM·TTS·이미지·애니메이션) + 결정적 코드 + 휴먼 터치 게이트 · 기본 산출물은 ffmpeg MP4, CapCut/FCPXML은 선택 핸드오프</footer>
 
 </div>
 </body>
