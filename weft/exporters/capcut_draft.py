@@ -62,10 +62,18 @@ def _dump(path: Path, obj: Any) -> None:
     path.write_text(json.dumps(obj, ensure_ascii=False), encoding="utf-8")
 
 
-def _find_skeleton(root: Path) -> Path:
-    """Pick an empty draft (tracks==[]) to clone; fall back to the smallest draft."""
+def _find_skeleton(root: Path, exclude_name: str | None = None) -> Path:
+    """Pick an empty draft (tracks==[]) to clone; fall back to the smallest draft.
+
+    Weft's own outputs (the destination folder, prior weft_* drafts, *.weft_bak_*
+    archives) are never candidates — choosing the destination itself as skeleton
+    would archive it away and then fail the copy with FileNotFoundError.
+    """
     candidates = []
     for child in sorted(root.iterdir()):
+        name = child.name
+        if name == exclude_name or name.startswith("weft_") or ".weft_bak" in name:
+            continue
         info = child / "draft_info.json"
         if not info.is_file():
             continue
@@ -144,6 +152,15 @@ def _photo_material(path: str, width: int, height: int) -> dict:
     }
 
 
+def _video_material(path: str, width: int, height: int, duration_us: int) -> dict:
+    material = _photo_material(path, width, height)
+    material["type"] = "video"
+    material["duration"] = duration_us
+    material["has_audio"] = False
+    material["material_name"] = os.path.basename(path)
+    return material
+
+
 def _audio_material(path: str, duration_us: int) -> dict:
     mid = _uuid_l()
     return {
@@ -180,7 +197,9 @@ def _motion(motion_type: str, dur_us: int, base: float) -> tuple[list[dict], flo
                  _kflist("KFTypeScaleY", [(0, hi), (dur_us, base)])], hi, 1.0, False)
     if motion_type in ("pan_lr", "pan_rl"):
         a, b = (-PAN_SHIFT, PAN_SHIFT) if motion_type == "pan_lr" else (PAN_SHIFT, -PAN_SHIFT)
-        return ([_kflist("KFTypePositionX", [(0, a), (dur_us, b)])], base, 1.0, False)
+        # cover scale leaves zero margin, so a bare PositionX shift exposes the
+        # background; zoom in slightly (like the ffmpeg path) to buy pan headroom.
+        return ([_kflist("KFTypePositionX", [(0, a), (dur_us, b)])], base * ZOOM_RATIO, 1.0, False)
     if motion_type == "fade":
         end = min(FADE_US, dur_us)
         return ([_kflist("KFTypeAlpha", [(0, 0.0), (end, 1.0)])], base, 1.0, True)
@@ -297,13 +316,36 @@ def _make_card_png(shot_id: str, kind: str, out_dir: Path, text: str | None = No
     return out
 
 
+_VIDEO_EXTS = {".mp4", ".mov", ".m4v", ".webm", ".mkv", ".avi"}
+_FALLBACK_DIMS = (1536, 1024)
+
+
 def _img_dims(path: str) -> tuple[int, int]:
+    """Pixel dimensions of an image or video asset.
+
+    PIL cannot open videos; a silent fallback there miscomputes the cover scale
+    (e.g. a 320x180 clip got scale 1.25 instead of 6.0). Probe videos with ffprobe.
+    """
+    if Path(path).suffix.lower() in _VIDEO_EXTS:
+        try:
+            result = subprocess.run(
+                ["ffprobe", "-v", "error", "-select_streams", "v:0",
+                 "-show_entries", "stream=width,height", "-of", "csv=p=0", str(path)],
+                capture_output=True, text=True, check=True,
+            )
+            parts = [p for p in result.stdout.strip().splitlines()[0].split(",") if p]
+            w, h = int(parts[0]), int(parts[1])
+            if w > 0 and h > 0:
+                return (w, h)
+        except Exception:
+            pass
+        return _FALLBACK_DIMS
     try:
         from PIL import Image
         with Image.open(path) as im:
             return im.size
     except Exception:
-        return (1536, 1024)
+        return _FALLBACK_DIMS
 
 
 # ------------------------------------------------------------------- build ---
@@ -336,7 +378,17 @@ def build_capcut_draft(
             cutoff = max((us(v["end"]) for v in video_events), default=0)
             audio_events = [a for a in audio_events if us(a["start"]) < cutoff]
 
-    skeleton = _find_skeleton(root)
+    # Fail early (before touching the CapCut root) when a shot has no picked asset:
+    # an empty src would resolve to the project directory itself and crash later
+    # with an opaque IsADirectoryError while copying.
+    unpicked = [str(v.get("shot_id") or f"video[{i}]") for i, v in enumerate(video_events) if not (v.get("src") or "")]
+    if unpicked:
+        raise RuntimeError(
+            "선택된 이미지(src)가 없는 shot이 있습니다: " + ", ".join(unpicked)
+            + ". `weft pick`으로 후보를 선택하거나 PICKS.json을 채운 뒤 다시 실행하세요."
+        )
+
+    skeleton = _find_skeleton(root, exclude_name=folder_name)
     dest = root / folder_name
     backup: Path | None = None
     if dest.exists():
@@ -364,6 +416,7 @@ def build_capcut_draft(
     materials_dir.mkdir(parents=True, exist_ok=True)
     copy_cache: dict[str, str] = {}
     material_by_path: dict[str, str] = {}
+    dims_by_path: dict[str, tuple[int, int]] = {}
     video_segments: list[dict] = []
 
     for ev in video_events:
@@ -373,13 +426,19 @@ def build_capcut_draft(
             asset = str(_make_card_png(ev["shot_id"], kind, materials_dir, card_text.get(ev["shot_id"])))
         else:
             asset = _localize((base / src).resolve(), materials_dir, copy_cache, src.replace("/", "_"))
+        if asset not in dims_by_path:
+            dims_by_path[asset] = _img_dims(asset)
+        w, h = dims_by_path[asset]
         if asset not in material_by_path:
-            w, h = _img_dims(asset)
-            pm = _photo_material(asset, w, h)
+            start_us = us(ev["start"])
+            dur_us = us(ev["end"]) - start_us
+            if kind in {"clip", "stock_clip", "remotion", "hyperframe"}:
+                pm = _video_material(asset, w, h, dur_us)
+            else:
+                pm = _photo_material(asset, w, h)
             mats["videos"].append(pm)
             material_by_path[asset] = pm["id"]
         material_id = material_by_path[asset]
-        w, h = _img_dims(asset)
         cover = max(CANVAS_W / w, CANVAS_H / h)
         start_us = us(ev["start"])
         dur_us = us(ev["end"]) - start_us
@@ -478,6 +537,11 @@ def _wire_skeleton(dest: Path, info: dict, timeline_id: str, project_id: str) ->
 def _write_draft_meta(dest: Path, folder_name: str, draft_id: str, total_us: int) -> None:
     now_us = int(time.time()) * 1_000_000
     meta_path = dest / "draft_meta_info.json"
+    if not meta_path.is_file():
+        raise RuntimeError(
+            f"스켈레톤 draft에 draft_meta_info.json이 없습니다: {meta_path}. "
+            "CapCut에서 빈 프로젝트를 새로 하나 만들어 정상 스켈레톤을 확보한 뒤 다시 실행하세요."
+        )
     meta = _load(meta_path)
     meta["draft_fold_path"] = str(dest)
     meta["draft_name"] = folder_name
