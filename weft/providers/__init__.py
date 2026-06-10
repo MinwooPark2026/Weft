@@ -8,5 +8,6 @@ can skip re-billing unchanged inputs.
 from __future__ import annotations
 
 from .env import load_env
+from .registry import create_image_provider, create_tts_provider, image_provider_label
 
-__all__ = ["load_env"]
+__all__ = ["create_image_provider", "create_tts_provider", "image_provider_label", "load_env"]

@@ -109,7 +109,9 @@
 <script>
 const S={shots:[],idx:0,cur:0,busy:false};
 const $=id=>document.getElementById(id);
-const esc=s=>{const d=document.createElement('div');d.textContent=s||'';return d.innerHTML};
+const TOKEN=new URLSearchParams(location.search).get('token')||'';
+const api=(url,opts={})=>fetch(url,{...opts,headers:{'X-Weft-Token':TOKEN,...(opts.headers||{})}});
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 document.querySelector('header span[title=단축키]').onmouseenter=e=>e.currentTarget.querySelector('.hp').style.display='block';
 document.querySelector('header span[title=단축키]').onmouseleave=e=>e.currentTarget.querySelector('.hp').style.display='none';
 
@@ -118,7 +120,7 @@ $('toast').onclick=()=>$('toast').classList.remove('show');
 function overlay(on,txt){$('overlay').classList.toggle('hidden',!on);if(txt)$('ovtext').textContent=txt;}
 
 async function load(keep){
-  const d=await (await fetch('/api/state')).json();
+  const d=await (await api('/api/state')).json();
   S.shots=d.shots; $('title').textContent=d.title||'Weft picker'; $('total').textContent=S.shots.length;
   if(keep!=null){const i=S.shots.findIndex(s=>s.shot_id===keep); if(i>=0)S.idx=i;}
   renderSidebar(); go(S.idx);
@@ -182,13 +184,13 @@ function updateClasses(){
 }
 async function pick(f){
   const s=S.shots[S.idx]; s.pick=f; updateClasses(); renderSidebar(); toast(`✓ ${s.shot_id} / ${f}`);
-  await fetch('/api/pick',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shot_id:s.shot_id,candidate:f})});
+  await api('/api/pick',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shot_id:s.shot_id,candidate:f})});
 }
 function moveCur(d){const s=S.shots[S.idx];if(!s.candidates.length)return;S.cur=Math.max(0,Math.min(s.candidates.length-1,S.cur+d));updateClasses();}
 async function savePrompt(){
   if(misplacedExternalText())return;
   const s=S.shots[S.idx], p=$('prompt').value.trim();
-  await fetch('/api/prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shot_id:s.shot_id,prompt:p})});
+  await api('/api/prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shot_id:s.shot_id,prompt:p})});
   s.prompt=p; toast('💾 프롬프트 저장됨');
 }
 async function generate(){
@@ -196,7 +198,7 @@ async function generate(){
   const s=S.shots[S.idx]; if(S.busy)return; S.busy=true; overlay(true,`${s.shot_id} 생성 중…`); $('gen-btn').disabled=true;
   try{
     const n=+$('n-select').value, p=$('prompt')?$('prompt').value.trim():'';
-    const r=await (await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shot_id:s.shot_id,n,prompt:p})})).json();
+    const r=await (await api('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shot_id:s.shot_id,n,prompt:p})})).json();
     if(!r.ok)throw new Error(r.error);
     s.prompt=p; s.candidates=r.candidates; s.pick=r.pick||r.new[0]||s.pick; S.cur=s.candidates.indexOf(s.pick); renderCards(); renderSidebar();
     toast(`✓ 생성+선택 ${r.new.join(', ')}`);
@@ -224,7 +226,7 @@ function readExt(f){const r=new FileReader();r.onload=()=>addExt({data:r.result}
 async function addExt(payload){
   const s=S.shots[S.idx]; overlay(true,'외부 이미지 추가 중…');
   try{
-    const r=await (await fetch('/api/external',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shot_id:s.shot_id,...payload})})).json();
+    const r=await (await api('/api/external',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shot_id:s.shot_id,...payload})})).json();
     if(!r.ok)throw new Error(r.error);
     s.candidates=r.candidates; S.cur=s.candidates.indexOf(r.name); renderCards(); renderSidebar(); toast('✓ 외부 이미지 추가 '+r.name);
   }catch(e){toast('추가 실패: '+e.message,'err');}
@@ -233,7 +235,7 @@ async function addExt(payload){
 async function build(){
   if(S.busy)return; S.busy=true; overlay(true,'CapCut 드래프트 빌드 중…'); $('build-btn').disabled=true;
   try{
-    const r=await (await fetch('/api/build',{method:'POST'})).json();
+    const r=await (await api('/api/build',{method:'POST'})).json();
     if(!r.ok)throw new Error(r.error);
     if(r.capcut_running) toast('⚠ CapCut 실행 중이라 등록 생략 — CapCut 종료 후 빌드하면 목록 갱신됨. 파일은 갱신됨('+r.video_segments+' video).','warn');
     else toast('🎬 빌드+등록 완료 — CapCut에서 '+(r.folder_name||'draft')+' 열기 ('+r.video_segments+' video / '+r.audio_segments+' audio)');
