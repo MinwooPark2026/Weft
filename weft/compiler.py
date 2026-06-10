@@ -16,10 +16,10 @@ def compile_render_plan(project: dict[str, Any], picks: dict[str, Any] | None = 
     beat_times = _beat_times(beats, sample_rate)
     picks = picks or {"selections": {}}
 
-    video = _compile_video(shots, beat_times, picks, sample_rate)
+    total = beat_times[beats[-1]["id"]]["end"] if beats else 0
+    video = _compile_video(shots, beat_times, picks, sample_rate, total)
     audio = _compile_audio(beats, beat_times)
     subtitles = _compile_subtitles(beats, beat_times)
-    total = beat_times[beats[-1]["id"]]["end"] if beats else 0
 
     return {
         "schema": "weft-render-plan-v1",
@@ -76,6 +76,7 @@ def _compile_video(
     beat_times: dict[str, dict[str, int]],
     picks: dict[str, Any],
     sample_rate: int,
+    total: int,
 ) -> list[dict[str, Any]]:
     raw_events: list[dict[str, Any]] = []
     for shot in shots:
@@ -110,9 +111,15 @@ def _compile_video(
         )
 
     raw_events.sort(key=lambda event: (event["start"], event["end"]))
+    if raw_events and raw_events[0]["start"] > 0:
+        # Leading pause beats are not coverable; stretch the first visual back to 0.
+        raw_events[0]["start"] = 0
     for index, event in enumerate(raw_events):
         if index + 1 < len(raw_events) and raw_events[index + 1]["start"] > event["end"]:
             event["end"] = raw_events[index + 1]["start"]
+        elif index + 1 == len(raw_events) and event["end"] < total:
+            # Trailing pause beats would otherwise leave black frames at the end.
+            event["end"] = total
         event["start_seconds"] = samples_to_seconds(event["start"], sample_rate)
         event["end_seconds"] = samples_to_seconds(event["end"], sample_rate)
         event["start_clock"] = format_clock(event["start"], sample_rate)
@@ -121,6 +128,10 @@ def _compile_video(
 
 
 def _source_for_shot(shot: dict[str, Any], picks: dict[str, Any]) -> str | None:
+    if shot.get("source_kind") in {"remotion", "hyperframe"}:
+        return shot.get("src") or f"SHOTS/{shot['id']}/rendered/clip.mp4"
+    if shot.get("source_kind") in {"clip", "stock_clip"}:
+        return shot.get("src") or shot.get("clip_src") or shot.get("prompt")
     if shot.get("source_kind") == "reuse":
         target = shot.get("reuse_of")
         rel = picks.get("selections", {}).get(target)

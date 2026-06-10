@@ -14,7 +14,11 @@ def validate_project(project: dict[str, Any], picks: dict[str, Any] | None = Non
     coverage: dict[str, list[str]] = {beat_id: [] for beat_id in coverable}
     montage_groups: dict[str, list[dict[str, Any]]] = {}
     shot_ids = {shot["id"] for shot in shots}
-    non_reuse = {shot["id"] for shot in shots if shot.get("source_kind") != "reuse"}
+    pick_required = {
+        shot["id"]
+        for shot in shots
+        if shot.get("source_kind") not in {"reuse", "clip", "stock_clip", "remotion", "hyperframe"}
+    }
 
     for shot in shots:
         cover = shot.get("cover")
@@ -55,6 +59,27 @@ def validate_project(project: dict[str, Any], picks: dict[str, Any] | None = Non
         elif len(shot_list) > 1 and not all(_shot_by_id(shots, shot_id).get("montage_slot") for shot_id in shot_list):
             violations.append(_violation("I3", "error", beat_id, "overlapping non-montage coverage"))
 
+    prev_id: str | None = None
+    prev_source_end: float | None = None
+    for beat in beats:
+        source_start = beat.get("source_start")
+        if source_start is None:
+            prev_id = None
+            prev_source_end = None
+            continue
+        if prev_source_end is not None and abs(float(source_start) - prev_source_end) > 1e-6:
+            violations.append(
+                _violation(
+                    "I11",
+                    "warning",
+                    beat["id"],
+                    f"시간 열이 이어지지 않습니다: {prev_id} 끝 {prev_source_end:g}s ≠ {beat['id']} 시작 "
+                    f"{float(source_start):g}s — CONTI.md에서 두 행의 시간 열을 확인하세요",
+                )
+            )
+        prev_id = beat["id"]
+        prev_source_end = float(source_start) + float(beat.get("duration", 0))
+
     for beat_id, slot_shots in montage_groups.items():
         of_values = {shot["montage_slot"].get("of") for shot in slot_shots}
         if len(of_values) != 1:
@@ -69,9 +94,17 @@ def validate_project(project: dict[str, Any], picks: dict[str, Any] | None = Non
         selections = set(picks.get("selections", {}).keys())
         auto_picked = set(picks.get("auto_picked", []))
         overridden = set(picks.get("overridden", []))
-        if not selections <= non_reuse:
-            violations.append(_violation("I7", "error", "PICKS.json", "selections contains reuse or unknown shots"))
-        missing = non_reuse - selections
+        if not selections <= pick_required:
+            extra = selections - pick_required
+            violations.append(
+                _violation(
+                    "I7",
+                    "error",
+                    "PICKS.json",
+                    "selections contains reuse or unknown shots: " + ", ".join(sorted(extra)[:8]),
+                )
+            )
+        missing = pick_required - selections
         if missing:
             violations.append(_violation("I7", "error", "PICKS.json", "missing selections: " + ", ".join(sorted(missing)[:8])))
         if auto_picked & overridden:

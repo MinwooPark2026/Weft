@@ -6,6 +6,21 @@ from pathlib import Path
 # weft/ root = parent of the package directory (weft/providers/env.py -> weft)
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 
+# os.environ 의 현재 값이 설정 파일(.env 또는 WEFT_SETTINGS.txt)에서 온 키들.
+# 우선순위(셸 환경변수 > WEFT_SETTINGS.txt > .env)를 지키기 위해, 설정 적용 시
+# "셸에서 직접 export 된 값"과 "파일이 채워 넣은 값"을 구분하는 데 쓴다.
+_FILE_PROVIDED_KEYS: set[str] = set()
+
+
+def mark_file_provided(key: str) -> None:
+    """Record that the current ``os.environ[key]`` came from a config file."""
+    _FILE_PROVIDED_KEYS.add(key)
+
+
+def is_file_provided(key: str) -> bool:
+    """True if the current ``os.environ[key]`` was set by a config file, not the shell."""
+    return key in _FILE_PROVIDED_KEYS
+
 
 def load_env(path: str | Path | None = None) -> dict[str, str]:
     """Parse a ``.env`` file into a dict and into ``os.environ`` (without overwrite).
@@ -32,7 +47,9 @@ def load_env(path: str | Path | None = None) -> dict[str, str]:
             break
 
     for key, value in values.items():
-        os.environ.setdefault(key, value)
+        if key not in os.environ:
+            os.environ[key] = value
+            _FILE_PROVIDED_KEYS.add(key)
     return values
 
 

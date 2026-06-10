@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 
+_ESCAPED_PIPE_SENTINEL = "\x00"
+
+
 def split_markdown_row(line: str) -> list[str] | None:
     stripped = line.strip()
     if not stripped.startswith("|") or not stripped.endswith("|"):
         return None
-    return [cell.strip() for cell in stripped.strip("|").split("|")]
+    protected = stripped.replace("\\|", _ESCAPED_PIPE_SENTINEL)
+    return [cell.strip().replace(_ESCAPED_PIPE_SENTINEL, "|") for cell in protected.strip("|").split("|")]
 
 
 def is_separator_row(cells: list[str]) -> bool:
@@ -24,14 +28,28 @@ def parse_markdown_tables(text: str) -> list[dict[str, object]]:
             continue
 
         rows: list[dict[str, str]] = []
+        mismatches: list[dict[str, object]] = []
         i += 2
         while i < len(lines):
             cells = split_markdown_row(lines[i])
-            if not cells or len(cells) != len(header):
+            if not cells:
                 break
+            if len(cells) != len(header):
+                # Keep parsing but remember the broken row; the caller decides
+                # whether this table matters enough to raise (see parser._find_table).
+                mismatches.append(
+                    {
+                        "line": i + 1,
+                        "expected": len(header),
+                        "got": len(cells),
+                        "content": lines[i].strip(),
+                    }
+                )
+                i += 1
+                continue
             rows.append(dict(zip(header, cells)))
             i += 1
-        tables.append({"header": header, "rows": rows})
+        tables.append({"header": header, "rows": rows, "mismatches": mismatches})
     return tables
 
 

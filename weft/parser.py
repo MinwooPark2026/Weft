@@ -29,7 +29,13 @@ def parse_conti(path: str | Path) -> dict[str, Any]:
     shot_meta = _parse_shot_meta(shot_rows)
 
     beats = [_parse_beat(row) for row in conti_rows]
-    beat_index = {beat["id"]: index for index, beat in enumerate(beats)}
+    beat_index: dict[str, int] = {}
+    for index, beat in enumerate(beats):
+        if beat["id"] in beat_index:
+            raise ValueError(
+                f"beat id {beat['id']!r}가 콘티 표에 두 번 이상 나옵니다 — beat 열의 id가 겹치지 않게 바꿔 주세요"
+            )
+        beat_index[beat["id"]] = index
     shots = _derive_shots(conti_rows, shot_meta, beat_index)
 
     return {
@@ -51,13 +57,30 @@ def _find_table(tables: list[dict[str, object]], first_column: str) -> list[dict
     for table in tables:
         header = table["header"]
         if isinstance(header, list) and header and str(header[0]).strip().lower() == first_column:
-            return table["rows"]  # type: ignore[return-value]
+            mismatches = table.get("mismatches") or []
+            if mismatches:
+                details = " / ".join(
+                    f"{item['line']}행은 {item['got']}칸: {item['content']}"
+                    for item in mismatches[:5]  # type: ignore[index]
+                )
+                raise ValueError(
+                    f"CONTI.md의 {first_column!r} 표에 칸 수가 헤더({len(header)}칸)와 다른 행이 있습니다 — "
+                    f"{details} — 해당 행의 | 구분 개수를 헤더와 맞춰 주세요 (셀 안의 |는 \\|로 적습니다)"
+                )
+            return [_normalize_row_keys(row) for row in table["rows"]]  # type: ignore[union-attr]
     raise ValueError(f"could not find markdown table with first column {first_column!r}")
+
+
+def _normalize_row_keys(row: dict[str, str]) -> dict[str, str]:
+    return {str(key).strip().lower(): value for key, value in row.items()}
+
+
+_STYLE_BIBLE_RE = re.compile(r"^\s*>?\s*\*{0,2}스타일\s*바이블[\s*]*:")
 
 
 def _extract_style_bible(text: str) -> str:
     for line in text.splitlines():
-        if "스타일 바이블" in line:
+        if _STYLE_BIBLE_RE.match(line):
             value = line.split(":", 1)[-1].strip()
             return re.sub(r"\*\*", "", value).strip()
     return ""
@@ -65,17 +88,20 @@ def _extract_style_bible(text: str) -> str:
 
 def _parse_beat(row: dict[str, str]) -> dict[str, Any]:
     beat_id = row["beat"].strip()
-    visual = row["시각(shot)"].strip()
-    time_range = parse_time_range(row.get("시간", ""))
+    visual = row["시각(shot)"].strip().replace("\ufe0f", "")  # drop emoji variation selectors (▶️ → ▶)
+    raw_text = row.get("나레이션 (tts)", "").strip()
+    tone, clean_text = _extract_tone_and_clean_text(raw_text)
+    try:
+        time_range = parse_time_range(row.get("시간", ""))
+    except ValueError as exc:
+        raise ValueError(f"beat {beat_id}: 시간 열을 읽을 수 없습니다 ({exc}) — 0:00~0:11 형식으로 적어 주세요") from exc
     if time_range:
         start, end = time_range
         duration = end - start
     else:
         start = None
-        duration = _estimate_duration(row.get("나레이션 (TTS)", ""))
+        duration = _estimate_duration(clean_text)
 
-    raw_text = row.get("나레이션 (TTS)", "").strip()
-    tone, clean_text = _extract_tone_and_clean_text(raw_text)
     subtitle = row.get("자막", "").strip()
     kind = "narration"
 
@@ -127,9 +153,15 @@ def _extract_tone_and_clean_text(raw: str) -> tuple[str | None, str]:
 
 def _parse_shot_meta(rows: list[dict[str, str]]) -> dict[str, dict[str, Any]]:
     meta_by_alias: dict[str, dict[str, Any]] = {}
+    seen_ids: set[str] = set()
     for row in rows:
         raw_id = row["shot id"].strip()
         shot_id, aliases = _normalize_shot_id(raw_id)
+        if shot_id in seen_ids:
+            raise ValueError(
+                f"shot id {shot_id!r}가 샷 리스트 표에 두 번 이상 정의되어 있습니다 — 중복 행을 하나로 합치거나 id를 바꿔 주세요"
+            )
+        seen_ids.add(shot_id)
         source_raw = row.get("source_kind", "").strip()
         source_kind = _source_kind(source_raw)
         reuse_of = _reuse_target(source_raw) if source_kind == "reuse" else None
@@ -168,8 +200,14 @@ def _source_kind(raw: str) -> str:
         return "screen_element"
     if lowered.startswith("reuse"):
         return "reuse"
+    if lowered.startswith("clip"):
+        return "clip"
     if lowered.startswith("stock_clip"):
         return "stock_clip"
+    if lowered.startswith("remotion"):
+        return "remotion"
+    if lowered.startswith("hyperframe"):
+        return "hyperframe"
     return "image"
 
 
@@ -215,6 +253,8 @@ def _derive_shots(
             target = reuse_of if reuse_of else meta.get("reuse_of")
             if source_kind == "reuse" and target:
                 shot["reuse_of"] = canonical(target)
+            if source_kind in {"clip", "stock_clip"} and meta.get("prompt"):
+                shot["src"] = meta["prompt"]
             shots_by_id[shot_id] = shot
             order.append(shot_id)
         else:
@@ -223,18 +263,30 @@ def _derive_shots(
 
     for row in conti_rows:
         beat_id = row["beat"].strip()
-        visual = row["시각(shot)"].strip()
+        visual = row["시각(shot)"].strip().replace("\ufe0f", "")  # drop emoji variation selectors (▶️ → ▶)
         if visual.startswith(TOKEN_PAUSE):
             continue
-        if not visual or visual == TOKEN_HOLD or visual.startswith(TOKEN_HOLD):
-            if current:
-                _extend_cover(shots_by_id[current], beat_id, beat_index)
+        if not visual or visual.startswith(TOKEN_HOLD):
+            if current is None:
+                raise ValueError(
+                    f"beat {beat_id}: ↓(홀드)인데 유지할 직전 shot이 없습니다 — "
+                    f"▦ 몽타주 바로 다음 행에서는 ↓ 대신 ▶(새 그림)나 ↺(재사용)로 shot을 지정해 주세요"
+                )
+            _extend_cover(shots_by_id[current], beat_id, beat_index)
             continue
         if visual.startswith(TOKEN_MONTAGE):
             ids = [part.strip() for part in visual[1:].split("/") if part.strip()]
             anchors = _infer_anchor_texts(row.get("자막", ""), len(ids))
             for index, raw_id in enumerate(ids):
-                shot = ensure(raw_id, beat_id)
+                source_id = canonical(raw_id)
+                if source_id in shots_by_id:
+                    # The shot already covers earlier beats; overwriting its cover
+                    # would orphan them. Synthesize a reuse shot for this slot instead.
+                    shot = ensure(f"s_mont_{beat_id}_{index}_{source_id}", beat_id, default_kind="reuse", reuse_of=source_id)
+                    shot["source_kind"] = "reuse"
+                    shot["reuse_of"] = source_id
+                else:
+                    shot = ensure(raw_id, beat_id)
                 shot["cover"] = {"from": beat_id, "to": beat_id}
                 shot["montage_slot"] = {
                     "index": index,
@@ -268,12 +320,7 @@ def _derive_shots(
             shot["source_kind"] = "text_card"
             current = shot["id"]
             continue
-        if visual.startswith(TOKEN_TITLE):
-            shot = ensure(visual[1:].strip(), beat_id, default_kind="screen_element")
-            shot["source_kind"] = "screen_element"
-            current = shot["id"]
-            continue
-        if visual.startswith(TOKEN_END):
+        if visual.startswith((TOKEN_TITLE, TOKEN_END)):
             shot = ensure(visual[1:].strip(), beat_id, default_kind="screen_element")
             shot["source_kind"] = "screen_element"
             current = shot["id"]
@@ -317,7 +364,7 @@ def _infer_motion_type(value: str) -> str:
 def _infer_anchor_texts(subtitle: str, count: int) -> list[str]:
     if not subtitle or count <= 0:
         return []
-    parts = [p.strip(" ?!·") for p in re.split(r"[·,/]|\\s{2,}", subtitle) if p.strip(" ?!·")]
+    parts = [p.strip(" ?!·") for p in re.split(r"[·,/]|\s{2,}", subtitle) if p.strip(" ?!·")]
     if len(parts) == count:
         return parts
     question_parts = [p.strip() for p in re.split(r"\?", subtitle) if p.strip()]
