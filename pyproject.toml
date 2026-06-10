@@ -10,9 +10,12 @@ authors = [{ name = "Minwoo Park" }]
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
 dependencies = [
-  "openai",
-  "Pillow",
+  "openai>=1.0,<3",
+  "Pillow>=10",
 ]
+
+[project.optional-dependencies]
+dev = ["pytest"]
 
 [project.scripts]
 weft = "weft.cli:main"

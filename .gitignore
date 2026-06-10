@@ -4,7 +4,10 @@
 __pycache__/
 *.pyc
 dist/
+build/
+.pytest_cache/
 *.egg-info/
 generated_project/
 voice_samples/
 *.zip
+planning/
