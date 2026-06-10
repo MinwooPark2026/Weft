@@ -25,7 +25,7 @@ description: >-
 ## 입력
 
 - `<project>/CONTI.md` (콘티 표 + shot 표)
-- `<project>/generated_project/CARDS.json` (❝ shot이 있을 때)
+- `<project>/CARDS.json` (❝ shot이 있을 때 — CONTI.md 옆이 정본, `weft conti`가 generated_project로 복사)
 - 스타일 바이블: CONTI.md 머리말의 `스타일 바이블:` 줄 (없으면 STYLE.txt / DEFAULT_STYLE)
 
 ## 체크리스트
@@ -78,9 +78,10 @@ description: >-
 
 ### 6. CARDS.json
 
-`❝` shot이 하나라도 있는데 `generated_project/CARDS.json`이 없거나 해당 shot id 키가
-없으면 **critical** — 화면에 shot id 문자열이 그대로 렌더된다. 누락된 키와 콘티의
-`프롬프트 / 문구` 칸을 근거로 한 최종 문구 초안을 함께 제시.
+`❝` shot이 하나라도 있는데 CARDS.json(CONTI.md 옆 또는 generated_project/)이 없거나 해당
+shot id 키가 없으면 **critical** — 화면에 shot id 문자열이 그대로 렌더된다. 누락된 키와
+콘티의 `프롬프트 / 문구` 칸을 근거로 한 최종 문구 초안을 함께 제시. 새 문구는 CONTI.md 옆
+CARDS.json에 쓴다(재실행에도 유지).
 
 ## 출력 형식
 

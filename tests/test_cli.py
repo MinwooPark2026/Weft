@@ -275,5 +275,38 @@ class CliWhereIsSkillTest(unittest.TestCase):
         self.assertIn("SKILL.md", stderr.getvalue())
 
 
+class CliCardsSeedTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self._env = _clean_env()
+        self.addCleanup(self._env.stop)
+
+    def test_conti_seeds_cards_json_from_conti_folder(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            conti = Path(tmp) / "CONTI.md"
+            conti.write_text(MINIMAL_CONTI, encoding="utf-8")
+            cards = {"s01_clip": "카드 문구\n둘째 줄"}
+            (Path(tmp) / "CARDS.json").write_text(json.dumps(cards, ensure_ascii=False), encoding="utf-8")
+            out = Path(tmp) / "out"
+
+            with patch("sys.stdout", io.StringIO()):
+                rc = cli_main(["conti", str(conti), "--out", str(out)])
+
+            self.assertEqual(0, rc)
+            seeded = json.loads((out / "CARDS.json").read_text(encoding="utf-8"))
+            self.assertEqual(cards, seeded)
+
+    def test_conti_without_cards_json_writes_nothing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            conti = Path(tmp) / "CONTI.md"
+            conti.write_text(MINIMAL_CONTI, encoding="utf-8")
+            out = Path(tmp) / "out"
+
+            with patch("sys.stdout", io.StringIO()):
+                rc = cli_main(["conti", str(conti), "--out", str(out)])
+
+            self.assertEqual(0, rc)
+            self.assertFalse((out / "CARDS.json").exists())
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -52,7 +52,7 @@ class DryRunTest(unittest.TestCase):
             self.assertTrue((Path(tmp) / "PICKS.json").exists())
             self.assertTrue((Path(tmp) / "EXPORTS" / "render_plan.json").exists())
             self.assertTrue((Path(tmp) / "EXPORTS" / "subtitles.srt").exists())
-            self.assertTrue((Path(tmp) / "SHOTS" / "s01_rank_card" / "images" / "dryrun" / "candidate_001.svg").exists())
+            self.assertTrue((Path(tmp) / "SHOTS" / "s01_rank_board" / "images" / "dryrun" / "candidate_001.svg").exists())
 
     def test_picker_override_removes_auto_picked_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

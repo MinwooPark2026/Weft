@@ -11,9 +11,9 @@
 
 | beat | 시각(shot) | 시간 | 나레이션 (TTS) | 자막 | 모션·메모 |
 |------|-----------|------|----------------|------|-----------|
-| b001 | ❝ s01_rank_card | 0:00~0:11 | 2012년, 세계에서 가장 큰 이미지 인식 대회가 있었어요. 컴퓨터한테 사진 한 장을 보여주고, "이게 뭐냐"고 묻는 대회. | 2012, 세계 최대 이미지 인식 대회 | 검은 배경·흰 숫자. 1위 행만 천천히 띄움, 나머지 흐리게 |
+| b001 | ▶ s01_rank_board | 0:00~0:11 | 2012년, 세계에서 가장 큰 이미지 인식 대회가 있었어요. 컴퓨터한테 사진 한 장을 보여주고, "이게 뭐냐"고 묻는 대회. | 2012, 세계 최대 이미지 인식 대회 | 글자 없는 순위 막대 보드: 1위 행만 또렷이 떠오름, 나머지 흐림. 숫자는 자막이 전달 |
 | b002 | ▦ s02_cat / s03_dog / s04_ship / s05_leopard | 0:11~0:15 | 고양이냐, 개냐, 컨테이너선이냐, 표범이냐. | 고양이? 개? 컨테이너선? 표범? | 한 단어당 한 컷, 빠르게 슬라이드 (4슬롯) |
-| b003 | ❝ s06_errorbar | 0:15~0:22 | 그 해 우승한 모델의 오차율이 15.3퍼센트였어요. 2위는 26.2퍼센트. | 1위 15.3% / 2위 26.2% | 막대 두 개 길이차 한눈에. 천천히 페이드인 |
+| b003 | ▶ s06_errorbar | 0:15~0:22 | 그 해 우승한 모델의 오차율이 15.3퍼센트였어요. 2위는 26.2퍼센트. | 1위 15.3% / 2위 26.2% | 막대 두 개 길이차 한눈에. 천천히 페이드인. 수치는 자막이 전달 |
 | b004 | ↓ | 0:22~0:26 | 격차가 10퍼센트포인트가 넘습니다. | 격차 10%p 이상 | (홀드, 두 막대 사이 간격 강조) |
 | b005 | ▶ s07_yearly_trend | 0:26~0:35 | 이게 어느 정도냐면, 이런 대회는 보통 매년 1퍼센트, 2퍼센트씩 줄어들거든요. | 보통은 매년 1~2%씩 | 완만한 하강선 그래프, 작은 계단들 |
 | b006 | ⤴ s07_yearly_trend.2 | 0:35~0:41 | 한 해에 10퍼센트가 빠지는 건, 경쟁이 아니라 사건이에요. | 한 해 10% = 경쟁 아닌 '사건' | 같은 그래프에 2012년 절벽 낙차가 추가로 그어짐 |
@@ -57,9 +57,9 @@
 | p005 | ⏸ 1초 | 4:39~4:40 | *(정적)* |  | 호흡 |
 | b040 | ▶ s26_correction_intro | 4:40~4:47 | 여기서 한 가지, 못박고 갈 게 있어요. 사실 정정 시간입니다. | 사실 정정 시간 | 작은 핀/압정이 보드에 박히는 은유 |
 | b041 | ↓ | 4:47~4:51 | 여러분이 어디서 잘못된 숫자에 속지 않게. | 잘못된 숫자에 속지 않게 | (홀드) |
-| b042 | ❝ s27_number_card | 4:51~5:01 | AlexNet 논문 초록을 보면 37.5퍼센트, 17.0퍼센트라는 숫자가 먼저 나와요. | 초록에 먼저 나오는 37.5% · 17.0% | 대비 카드: 흐릿한 잘못된 숫자(X) |
-| b043 | ↓ | 5:01~5:09 | 이걸 우승 기록으로 착각하기 쉬운데, 아니에요. 이건 논문이 주력으로 보고한 2010년 데이터셋의 오차율이에요. | 그건 2010년 데이터셋 오차율 (우승 기록 아님) | (홀드, 카드 아래쪽 작은 주석 부분 강조) |
-| b044 | ↓ | 5:09~5:18 | 실제 2012년 대회 우승 top-5 기록은 15.3퍼센트. 헷갈리기 쉬운 지점인데, 우리는 정확하게 갑시다. | 진짜 우승 = top-5 15.3% (2012) | (홀드, 또렷한 15.3% 줄이 빛남) |
+| b042 | ▶ s27_correction_tags | 4:51~5:01 | AlexNet 논문 초록을 보면 37.5퍼센트, 17.0퍼센트라는 숫자가 먼저 나와요. | 초록에 먼저 나오는 37.5% · 17.0% | 대비 도식: 흐릿한 위 태그(X) vs 또렷한 아래 태그. 숫자는 자막이 전달 |
+| b043 | ↓ | 5:01~5:09 | 이걸 우승 기록으로 착각하기 쉬운데, 아니에요. 이건 논문이 주력으로 보고한 2010년 데이터셋의 오차율이에요. | 그건 2010년 데이터셋 오차율 (우승 기록 아님) | (홀드, 흐릿한 위 태그 강조) |
+| b044 | ↓ | 5:09~5:18 | 실제 2012년 대회 우승 톱 파이브 기록은 15.3퍼센트. 헷갈리기 쉬운 지점인데, 우리는 정확하게 갑시다. | 진짜 우승 = top-5 15.3% (2012) | (홀드, 또렷한 아래 태그가 빛남) |
 | b045 | ▶ s28_big_to_engine | 5:18~5:27 | *[톤 한 단계 차분하게]* 자, 그래서 이 사건이 왜 중요하냐. | 이 사건이 왜 중요한가 | 빅뱅(점)에서 엔진(기계)으로 이어지는 전환 은유. 톤 낮춤 |
 | b046 | ↓ | 5:27~5:33 | AlexNet이 증명한 건 모델 하나가 아니에요. | 증명한 건 모델 하나가 아니다 | (홀드) |
 | b047 | ❝ s29_pattern_card | 5:33~5:41 | 한 줄로 요약되는 어떤 패턴이었어요. 아이디어는 오래돼도, 때가 무르익으면 폭발한다. | 아이디어는 오래돼도, 때가 무르익으면 폭발한다 | 타이포 카드, 핵심 문장 천천히 등장 |
@@ -72,7 +72,7 @@
 | b053 | ❝ s33_attention_title | 6:11~6:16 | "필요한 건 어텐션이 전부다." 어텐션, 우리말로 하면 '주의', '주목'이에요. | "Attention Is All You Need" = 어텐션이 전부다 | 타이포 카드(논문 제목) |
 | b054 | ▶ s34_one_way | 6:16~6:23 | 이게 왜 도발이냐면, 그때까지 기계가 문장을 읽는 방식은 딱 하나였거든요. | 그때까지 읽는 방식은 딱 하나 | 외길 화살표 하나가 단어 칸들을 따라 |
 | b055 | ⤴ s35_rnn_fade | 6:23~6:33 | 사람이 책 읽듯, 한 단어 한 단어, 순서대로, 한 칸씩. 첫 단어 읽고, 그걸 기억하고, 다음 단어 읽고. | 한 단어씩, 순서대로 (옛날 방식) | 단어들이 왼쪽부터 점등, 새 단어 켜질 때마다 앞 단어 흐려짐 |
-| b056 | ↓ | 6:33~6:41 | 이걸 RNN이라고 불렀어요. 이름은 굳이 안 외우셔도 돼요. 그냥 '옛날 방식'이라고 기억하시면 됩니다. | 이름은 RNN — 그냥 '옛날 방식' | (홀드, 같은 점등 패턴) |
+| b056 | ↓ | 6:33~6:41 | 이걸 알엔엔이라고 불렀어요. 이름은 굳이 안 외우셔도 돼요. 그냥 '옛날 방식'이라고 기억하시면 됩니다. | 이름은 RNN — 그냥 '옛날 방식' | (홀드, 같은 점등 패턴) |
 | b057 | ⤴ s35_rnn_fade.3 | 6:41~6:48 | 이 방식엔 두 가지 고질병이 있었어요. 화면 보세요. 하나, 느려요. 순서대로 읽으니까 동시에 처리를 못 해요. | 고질병①: 느리다 (순차 처리) | 화살표가 느릿느릿 한 칸씩 진행하는 강조 |
 | b058 | ⤴ s35_rnn_fade.4 | 6:48~7:00 | 둘, 단어가 켜질수록 앞 단어가 흐려지죠? 문장이 길어지면 앞을 까먹어요. 사람도 긴 문장 끝에 가면 주어가 뭐였는지 헷갈리잖아요. 기계도 똑같았어요. | 고질병②: 길어지면 앞을 까먹는다 | 문장 끝에서 첫 단어가 거의 안 보이게 |
 | p007 | ⏸ 1초 | 7:00~7:01 | *(정적)* |  | 호흡 |
@@ -87,15 +87,15 @@
 | b066 | ▶ s39_two_fixed | 8:05~8:14 | 그리고 순서를 버리니까, 그 두 고질병이 동시에 풀렸어요. | 순서를 버리니 두 고질병이 동시에 풀렸다 | 앞의 두 병(느림·망각) 아이콘에 체크가 켜짐 |
 | b067 | ↓ | 8:14~8:23 | 모든 단어를 한꺼번에 보니까 빠르고 — 병렬 처리가 되고요 — 멀리 떨어진 단어끼리도 직접 연결되니까 긴 문장도 안 까먹어요. | 한꺼번에 보니 빠르고 · 멀리도 직접 연결 | (홀드) |
 | b068 | ↓ | 8:23~8:28 | 버린 게 오히려 도약이었던 거예요. | 버린 게 오히려 도약 | (홀드) |
-| b069 | ❝ s40_bleu_card | 8:28~8:39 | 이 구조 — 트랜스포머라고 부릅니다 — 가 기계 번역에서 당시 최고 기록을 갈아치웁니다. | 트랜스포머: 영→독 28.4 / 영→불 41.8 (당시 1위) · GPU 8장, 3.5일 | 자막 카드: BLEU 점수 + 당시 1위 도장 |
-| b070 | ↓ | 8:39~8:49 | BLEU라는 번역 점수가 있어요. 높을수록 사람이 한 번역에 가깝다는 뜻인데, 이 점수를 단번에 끌어올린 게 그때가 처음이었어요. | BLEU = 높을수록 사람 번역에 가까움 ↑ | (홀드, 카드 유지) |
+| b069 | ❝ s40_bleu_card | 8:28~8:39 | 이 구조 — 트랜스포머라고 부릅니다 — 가 기계 번역에서 당시 최고 기록을 갈아치웁니다. | 트랜스포머: 기계 번역 최고 기록 경신 | 타이포 카드: BLEU 점수·당시 1위 (수치는 카드 문구가 전달) |
+| b070 | ↓ | 8:39~8:49 | 블루라는 번역 점수가 있어요. 높을수록 사람이 한 번역에 가깝다는 뜻인데, 이 점수를 단번에 끌어올린 게 그때가 처음이었어요. | BLEU = 높을수록 사람 번역에 가까움 ↑ | (홀드, 카드 유지) |
 | b071 | ↓ | 8:49~8:55 | 그것도 GPU 여덟 장으로 단 3.5일. 또 한 번, 압도적 효율로요. | GPU 8장, 단 3.5일 — 또 한 번 압도적 효율 | (홀드) |
 | p009 | ⏸ 1초 | 8:55~8:56 | *(정적)* |  | 호흡 |
 | b072 | ▶ s41_most_important | 8:56~9:03 | 자, 그리고 여기서 한 번 더 짚고 갈 게 있어요. 이게 제일 중요해요. | 한 번 더 — 이게 제일 중요하다 | 강조 마커가 가운데 빈 공간에 |
 | b073 | ▶ s42_engine_cars | 9:03~9:12 | "트랜스포머가 ChatGPT를 만들었다." 이렇게 말하고 싶어지죠. 근데 이건 정확하지 않아요. | "트랜스포머가 ChatGPT를 만들었다"? 부정확 | 엔진 1개 위에 차 3대(ChatGPT/Claude/Gemini) 얹힌 도식. 정지 홀드용 |
 | b074 | ↓ | 9:12~9:22 | 2017년 그 논문은 번역 논문이에요. ChatGPT도, Claude도, Gemini도 그 논문엔 한 글자도 안 나와요. | 2017 논문은 번역 논문 — 셋 다 안 나온다 | (홀드, 차 세 대 위 물음표) |
-| b075 | ↓ | 9:22~9:33 | 정확하게는 이래요. 이 트랜스포머라는 구조가 — 그 뒤로 5년에 걸쳐 점점 더 크게, 점점 더 많은 글로 키워지면서 — 오늘날 모든 대형 AI의 엔진이 됐어요. | 5년에 걸쳐 키워져 모든 대형 AI의 엔진이 됐다 | (홀드, 엔진이 점점 커지는 미세 모션) |
-| b076 | ↓ | 9:33~9:43 | 화면처럼요. 엔진은 하나, 그 위에 올라탄 차는 여러 대. 트랜스포머가 ChatGPT를 만든 게 아니라, ChatGPT가 트랜스포머라는 엔진 위에서 굴러가는 거예요. | 엔진은 하나, 차는 여러 대 | (홀드, 차들이 굴러가는 미세 모션) |
+| b075 | ⤴ s42_engine_cars.2 | 9:22~9:33 | 정확하게는 이래요. 이 트랜스포머라는 구조가 — 그 뒤로 5년에 걸쳐 점점 더 크게, 점점 더 많은 글로 키워지면서 — 오늘날 모든 대형 AI의 엔진이 됐어요. | 5년에 걸쳐 키워져 모든 대형 AI의 엔진이 됐다 | 엔진이 점점 커지는 단계 전개 |
+| b076 | ⤴ s42_engine_cars.3 | 9:33~9:43 | 화면처럼요. 엔진은 하나, 그 위에 올라탄 차는 여러 대. 트랜스포머가 ChatGPT를 만든 게 아니라, ChatGPT가 트랜스포머라는 엔진 위에서 굴러가는 거예요. | 엔진은 하나, 차는 여러 대 | 차 세 대가 굴러가는 단계 전개 |
 | b077 | ↓ | 9:43~9:47 | 발명가가 아니라 토대. | 발명가가 아니라 토대 | (홀드) |
 | p010 | ⏸ 1초 | 9:47~9:48 | *(정적)* |  | 호흡 |
 | b078 | ↓ | 9:48~9:51 | 이 구분이 정확합니다. | 이 구분이 정확하다 | (홀드, 엔진-차 도식 유지) |
@@ -128,12 +128,12 @@
 
 | shot id | source_kind | cover | 모션 | 프롬프트 / 문구 |
 |---|---|---|---|---|
-| s01_rank_card | text_card | b001 | static, 1위 행 fade-in | 한국어 문구: 검은 배경에 흰 숫자만의 2012 ImageNet 최종 순위표. 1위 한 줄만 또렷, 나머지 흐림 |
+| s01_rank_board | image | b001 | static, 1위 행 fade-in | A minimal leaderboard of soft horizontal bars on a deep charcoal background, the top bar crisp and glowing warm amber while the rows below stay blurred and dim, clean diagrammatic explainer look, absolutely no text, letters, numbers or labels |
 | s02_cat | image (몽타주 1/4) | b002 | zoom_in | A single house cat rendered as a clean explainer icon, three-quarter pose, warm cream background |
 | s03_dog | image (몽타주 2/4) | b002 | zoom_in | A single dog rendered as a clean explainer icon, three-quarter pose, matching the cat icon style |
 | s04_ship | image (몽타주 3/4) | b002 | zoom_in | A container cargo ship as a clean minimal explainer icon, side profile, stacked containers |
 | s05_leopard | image (몽타주 4/4) | b002 | zoom_in | A leopard rendered as a clean explainer icon, three-quarter pose, subtle spot pattern |
-| s06_errorbar | text_card | b003~b004 | fade-in, 간격 강조 | 한국어 문구: 막대 두 개 — 1위 15.3% (짧음) vs 2위 26.2% (긺), 길이차가 한눈에 |
+| s06_errorbar | image | b003~b004 | fade-in, 간격 강조 | Two minimal vertical bars side by side on a warm cream background, the left bar dramatically shorter than the right, a subtle bracket emphasizing the wide gap between their tops, clean diagrammatic explainer style, absolutely no text, letters, numbers or labels |
 | s07_yearly_trend | image | b005~b006 | static→절벽 추가 (build-up b006) | A gentle downward step-line graph of yearly error rates with small annual drops, then one dramatic cliff-like plunge at the final point; minimal grid, warm accents |
 | s08_podium_twist | image | b007 | pan, 순위표 후퇴 | A leaderboard panel receding and blurring into the background as the frame turns away, suggesting the real story is elsewhere; clean diagrammatic look |
 | s09_gtx580 | image | b008~b009 (재사용: b094) | push-in | Two consumer gaming graphics cards in their retail gaming boxes sitting side by side on a desk, depicted as clean stylized objects, warm light, no logos |
@@ -143,8 +143,8 @@
 | s12_oldpaper | image | b015~b016 | micro zoom | A faded 1980s black-and-white scanned research paper showing an old neural network schematic, vintage paper texture, sitting on a warm desk surface |
 | s13_authors | image | b017 | static | A small university lab building icon with three abstract badge/dot markers representing three researchers (no faces, no human figures), clean diagrammatic style |
 | s14_cnn_history | image | b018~b019 | static | A convolutional neural network schematic (stacked feature-map layers and connections) rendered in faded, aged monochrome tones to evoke the 1980s, clean diagram |
-| s15_didnt_work | image | b020 | subtle break-apart | The same neural network schematic faltering and breaking apart in front of a chaotic pile of complex real-world images, metaphor for failing on hard data |
-| s16_why_2012 | image | b021~b022 | glow | A 30-year horizontal timeline with the year 2012 point glowing brightly, three faint dots blinking as a preview, warm minimal style |
+| s15_didnt_work | image | b020 | subtle break-apart | A convolutional neural network schematic (stacked feature-map layers and connections) faltering and breaking apart in front of a chaotic pile of complex real-world images, metaphor for failing on hard data, absolutely no text, letters, numbers or labels |
+| s16_why_2012 | image | b021~b022 | glow | A 30-year horizontal timeline with a single point near its end glowing brightly, three faint dots blinking as a preview, warm minimal style, absolutely no text, letters, numbers or labels |
 | s17_data_word | image (몽타주 1/3) | b023 | drop-in | A clean icon of a data stack / grid of photos dropping into frame, warm accent |
 | s18_hw_word | image (몽타주 2/3) | b023 | drop-in | A clean icon of a GPU chip dropping into frame, matching style |
 | s19_trick_word | image (몽타주 3/3) | b023 | drop-in | A clean icon of a small gear / sleight-of-hand trick symbol dropping into frame |
@@ -155,12 +155,12 @@
 | s24_recipe | image | b036 | gather | Four ingredients converging into one bowl/vessel — an old idea, a thick data block, a perfectly-fitting hardware chip, and a small gear — as a recipe metaphor, warm flat-diagram style |
 | s25_filters | image | b037~b039 | micro zoom | AlexNet first-layer filter visualization: a grid of 96 small squares showing learned edges, color bands, and texture patterns, clean and orderly, warm-toned |
 | s26_correction_intro | image | b040~b041 | pin-in | A small push-pin / thumbtack being pressed into a board, metaphor for nailing down a correction, warm minimal scene |
-| s27_number_card | text_card | b042~b044 | 강조 전환 | 한국어 문구: 대비 카드 — 흐릿한 "인터넷 숫자 (X) 37.5% · 17.0% = 2010 데이터셋" 위에 또렷한 "우승 = top-5 15.3% (2012)" |
+| s27_correction_tags | image | b042~b044 | 강조 전환 | Two stacked rounded tags on a warm cream background: the upper tag blurred and softly struck through with an X mark, the lower tag crisp and glowing with a small check mark, a fact-correction metaphor, clean diagrammatic style, absolutely no text, letters, numbers or labels |
 | s28_big_to_engine | image | b045~b046 | morph | A morph from a bright bursting point (big bang) into a mechanical engine, conceptual transition metaphor, warm palette |
 | s29_pattern_card | text_card | b047 | 천천히 등장 | 한국어 문구: 아이디어는 오래돼도, 때가 무르익으면 폭발한다 |
 | s30_not_stop | image | b048~b049 | rising | A curve that rises, dips once, then continues climbing higher, suggesting deep learning did not stop; clean line graph, warm accents |
 | s31_learns_language | image | b050 | morph | A transition from an eye metaphor to a speech-bubble / mouth metaphor, conveying "learning to speak", clean conceptual diagram |
-| s32_timeline_img_to_text | image | b051~b052 | pan_lr | A timeline transitioning from an image icon labeled-area (2012) to a text/language icon area (2017), clean diagrammatic style, warm |
+| s32_timeline_img_to_text | image | b051~b052 | pan_lr | A timeline flowing from an eye-and-photo icon zone on the left into a speech-bubble icon zone on the right, marking the shift from images to language, clean diagrammatic style, warm palette, absolutely no text, letters, numbers or labels |
 | s33_attention_title | text_card | b053 | fade-in | 한국어/영어 문구: "Attention Is All You Need" — 필요한 건 어텐션이 전부다 |
 | s34_one_way | image | b054 | arrow trace | A single one-way arrow tracing across a row of word-boxes one cell at a time, suggesting the only old way to read a sentence, clean diagram |
 | s35_rnn_fade | image | b055~b058 | sequential light-up + fade (build-up b057, b058) | Words in a sentence lighting up one by one from the left; each new word lights while earlier words fade dimmer, so by the end the first word is nearly invisible (RNN sequential reading + forgetting), clean diagram |
@@ -168,9 +168,9 @@
 | s37_all_at_once | image | b060 | simultaneous light-up | All words in a sentence lighting up simultaneously while lines are drawn between every pair of words at once, dense connection web, clean diagram |
 | s38_attn_heatmap | image | b061~b065 | dissolve + line glow (build-up b063) | An abstract attention diagram: a horizontal row of soft word-shaped blocks forming a sentence, faint curved connection lines rising from one highlighted block near the end toward every other block, the single line reaching one distant block glowing far brighter than the rest, clean minimal diagram, absolutely no text, letters, numbers or labels |
 | s39_two_fixed | image | b066~b068 | checks light up | Two problem-icons (a slow snail/clock for "slow" and a fading-memory symbol for "forgetting") each getting a check mark lighting up, meaning both fixed at once, clean diagram |
-| s40_bleu_card | text_card | b069~b071 | 도장 찍힘 | 한국어 문구: BLEU = 번역 품질 점수 (↑ 사람 번역에 가까움) · 영→독 28.4 / 영→불 41.8 · "당시 1위" 도장 · GPU 8장, 3.5일 |
+| s40_bleu_card | text_card | b069~b071 | fade-in | 한국어 문구: BLEU 점수·기록 (최종 문구는 CARDS.json — 카드는 중앙 정렬 타이포만 가능) |
 | s41_most_important | image | b072 | marker pop | An emphasis marker / highlight starburst appearing in the center of empty negative space, signaling "this is the most important point", warm minimal |
-| s42_engine_cars | image | b073~b078 | micro motion (engine grows / cars roll) | One central car engine labeled-area for "transformer" with three cars riding on top of the same engine (ChatGPT / Claude / Gemini, no readable text — distinguished by color/shape), clean diagram metaphor; engine slightly enlarges and cars gently roll |
+| s42_engine_cars | image | b073~b078 | micro motion (build-up b075 엔진 확대, b076 차 롤링) | One central car engine with three cars riding on top of the same engine, the cars distinguished only by color and shape, clean diagram metaphor; the engine slightly enlarges and the cars gently roll; absolutely no text, letters, numbers or labels |
 | s43_one_curve | image | b079 | static | Two points marked on the same single rising curve, suggesting two events on one trajectory, clean line graph, cool-calm warm palette |
 | s44_see_and_read | image | b080~b081 (재사용: b091) | side-by-side | A side-by-side pairing: left the AlexNet filter-grid visualization, right the attention heatmap, conveying "seeing" and "reading", clean diagram |
 | s45_steam | image (몽타주 1/3) | b082 | light-on, 1s | An old steam-engine blueprint drawing as if a light switches on over the aged diagram, 1-second beat, warm glow |

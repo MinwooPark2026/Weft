@@ -90,7 +90,7 @@ description: >-
 
 ## 텍스트 카드 (❝) 처리
 
-`❝` shot의 실제 온스크린 문구는 `generated_project/CARDS.json` 에 `{shot_id: "문구\n여러 줄"}` 로 넣는다(빌드 시 Pillow가 한국어 타이포 PNG로 렌더). 콘티의 `자막`/`프롬프트 / 문구` 칸에 의도를 적어두고, CARDS.json에 최종 문구를 확정.
+`❝` shot의 실제 온스크린 문구는 **`CONTI.md` 옆 `CARDS.json`** 에 `{shot_id: "문구\n여러 줄"}` 로 넣는다 — `weft conti`가 이 파일을 `generated_project/`로 복사하므로 재실행에도 유지되고 저장소에 커밋할 수 있다(STYLE.txt와 같은 위치 규칙; 빌드 시 Pillow가 한국어 타이포 PNG로 렌더). 콘티의 `자막`/`프롬프트 / 문구` 칸에 의도를 적어두고, CARDS.json에 최종 문구를 확정.
 
 > ⚠️ **렌더러는 중앙 정렬 타이포 한 덩어리만 그린다.** 순위표·막대그래프·표·강조 흐림 같은
 > 레이아웃은 `❝`로 불가능하다 — 그런 장면은 `image`(정적 도식)나 `remotion`/`hyperframe`(움직이는

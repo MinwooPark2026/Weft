@@ -59,6 +59,20 @@ def _capcut_registration(no_register: bool) -> tuple[bool, bool]:
     return (not no_register and not running), running
 
 
+def _seed_cards(conti: str | Path, out_dir: str | Path) -> bool:
+    """CONTI.md 옆의 CARDS.json 을 프로젝트 출력으로 복사한다.
+
+    텍스트카드 문구를 generated_project 에만 두면 conti 재실행 때 사라지고
+    저장소에 커밋할 수도 없다 — STYLE.txt 처럼 콘티 옆이 정본이다.
+    """
+    src = Path(conti).resolve().parent / "CARDS.json"
+    if not src.is_file():
+        return False
+    dest = Path(out_dir) / "CARDS.json"
+    dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+    return True
+
+
 def _skill_paths() -> dict[str, dict[str, str]]:
     """저장소의 모든 스킬을 {스킬명: {claude: 경로, codex: 경로}} 로 수집한다."""
     root = Path(__file__).resolve().parents[1]
@@ -219,6 +233,8 @@ def _run(argv: list[str] | None = None) -> int:
         out_dir = args.out or setting_str(settings, "PROJECT_OUT", DEFAULT_PROJECT) or DEFAULT_PROJECT
         project = parse_conti(args.conti)
         result = write_project(project, Path(out_dir), materialize_assets=not args.no_assets)
+        if _seed_cards(args.conti, out_dir):
+            print("cards=CARDS.json (CONTI.md 옆 파일을 복사)")
         errors = [item for item in result["violations"] if item["severity"] == "error"]
         print(f"settings={settings_path}")
         print(f"wrote {out_dir}")
@@ -395,6 +411,8 @@ def _run(argv: list[str] | None = None) -> int:
         out_dir = args.out or setting_str(settings, "PROJECT_OUT", DEFAULT_PROJECT) or DEFAULT_PROJECT
         project = parse_conti(args.conti)
         result = write_project(project, Path(out_dir), materialize_assets=True)
+        if _seed_cards(args.conti, out_dir):
+            print("✓ cards → CARDS.json (CONTI.md 옆 파일을 복사)")
         errors = [item for item in result["violations"] if item["severity"] == "error"]
         if errors:
             print(f"validation_errors={len(errors)} — 콘티를 고친 뒤 다시 실행하세요.", file=sys.stderr)
