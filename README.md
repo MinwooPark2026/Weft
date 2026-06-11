@@ -206,6 +206,8 @@ weft images --n 3
 
 AI 어시스턴트로 대본을 Weft `CONTI.md`로 변환할 때는 `script-to-conti` 스킬을 사용하세요. Claude에서는 `.claude/skills/script-to-conti/`, Codex에서는 `.agents/skills/script-to-conti/`가 같은 내용을 제공합니다. AI agent의 기본 작업 방식은 `weft all`이 아니라 단계별 CLI 실행입니다. 정적인 은유/삽화는 `image`, 숫자 변화·도표·수식 전개는 `remotion` 또는 `hyperframe`, 기존 영상은 `clip`으로 고르게 하세요.
 
+AI agent가 CLI로 weft를 제어할 때의 권장 순서: `weft conti`가 0건으로 통과하면 **먼저 `conti-qa` 스킬로 품질 검토를 한 차례 돌리고** 나서 `weft tts`/`weft images`(API 과금)로 진행하세요 — 과금 전에 콘티를 고치는 것이 가장 쌉니다. 나레이션 칸의 TTS 발음 표기는 script-to-conti가 변환 시점에 적용합니다.
+
 콘티 이후 단계에도 전용 스킬이 있습니다 (`weft whereisskill`로 경로 확인):
 
 - `conti-qa`: `weft conti` 통과 후 콘티 품질 검토 — 리듬·이미지 프롬프트·텍스트카드·사실/추측 lint
@@ -460,6 +462,8 @@ weft images --n 3
 ### Script-To-Conti Skill
 
 Use the `script-to-conti` skill when you want an AI assistant to convert a script into a Weft `CONTI.md`. Claude reads `.claude/skills/script-to-conti/`; Codex reads `.agents/skills/script-to-conti/`. AI agents should normally run the CLI step by step instead of using `weft all`: choose `image` for static illustration/metaphor shots, `remotion` or `hyperframe` for charts/equations/process animation, and `clip` for existing video.
+
+Recommended order when an AI agent drives weft via the CLI: once `weft conti` passes with zero violations, **run the `conti-qa` skill once before** `weft tts`/`weft images` (which bill API usage) — fixing the conti before billing is the cheapest point. TTS-friendly pronunciation in the narration column is applied by script-to-conti at conversion time.
 
 Dedicated skills also cover the stages after the conti (`weft whereisskill` prints the paths):
 

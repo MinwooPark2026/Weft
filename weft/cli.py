@@ -242,6 +242,9 @@ def _run(argv: list[str] | None = None) -> int:
         print(f"video_events={len(result['render_plan']['video'])}")
         print(f"subtitle_events={len(result['render_plan']['subtitles'])}")
         print(f"total_seconds={result['render_plan']['total_seconds']:.3f}")
+        if not errors:
+            # AI agent 가 CLI 로 제어할 때를 위한 다음 단계 안내.
+            print("next: conti-qa 스킬로 품질 검토(권장, 과금 전이 가장 쌈) → weft tts → weft images → weft ffmpeg")
         return 1 if errors else 0
     if args.command == "tts":
         msg = _missing_project(args.project_dir, required="NARRATION.json")
