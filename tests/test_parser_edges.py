@@ -253,6 +253,47 @@ class ValidateEdgeTest(unittest.TestCase):
         )
         self.assertEqual([], validate_project(project))
 
+    def test_i12_long_single_event_emits_pace_warning_not_error(self) -> None:
+        project = _parse_inline(
+            "| b001 | ▶ s01_long | 0:00~0:10 | 첫 문장 | 자막 | static |\n"
+            "| b002 | ↓ | 0:10~0:20 | 둘째 문장 | 자막 | static |\n",
+            "| s01_long | image | b001~b002 | static | prompt |\n",
+        )
+        violations = validate_project(project)
+        warnings = [item for item in violations if item["invariant"] == "I12"]
+        self.assertEqual(1, len(warnings))
+        self.assertEqual("warning", warnings[0]["severity"])
+        self.assertEqual("s01_long", warnings[0]["where"])
+        self.assertIn("s01_long", warnings[0]["fix_hint"])
+        self.assertIn("20.0초", warnings[0]["fix_hint"])
+        self.assertIn("15초", warnings[0]["fix_hint"])
+        self.assertIn("b001", warnings[0]["fix_hint"])
+        self.assertIn("b002", warnings[0]["fix_hint"])
+        self.assertEqual([], [item for item in violations if item["severity"] == "error"])
+
+    def test_i12_not_emitted_at_or_below_threshold(self) -> None:
+        project = _parse_inline(
+            "| b001 | ▶ s01 | 0:00~0:15 | 첫 문장 | 자막 | static |\n",
+            "| s01 | image | b001 | static | prompt |\n",
+        )
+        self.assertEqual([], [item for item in validate_project(project) if item["invariant"] == "I12"])
+
+    def test_i12_montage_slot_uses_slot_share_not_whole_beat(self) -> None:
+        # 한 beat가 20초여도 ▦ 2슬롯이면 슬롯당 10초 — 경고가 나오면 안 된다.
+        project = _parse_inline(
+            "| b001 | ▦ s01 / s02 | 0:00~0:20 | 나열 문장 | 하나 · 둘 | fast |\n",
+            "| s01 | image | b001 | fast | p1 |\n"
+            "| s02 | image | b001 | fast | p2 |\n",
+        )
+        self.assertEqual([], [item for item in validate_project(project) if item["invariant"] == "I12"])
+
+    def test_i12_skips_moving_sources(self) -> None:
+        project = _parse_inline(
+            "| b001 | ▶ s01_clip | 0:00~0:20 | 긴 클립 문장 | 자막 | static |\n",
+            "| s01_clip | clip | b001 | static | CLIPS/intro.mp4 |\n",
+        )
+        self.assertEqual([], [item for item in validate_project(project) if item["invariant"] == "I12"])
+
     def test_i7_message_names_offending_shots(self) -> None:
         project = {
             "narration": {"beats": [{"id": "b001", "kind": "narration", "text": "t", "duration": 1.0}]},
@@ -280,10 +321,18 @@ class ValidateEdgeTest(unittest.TestCase):
 class ExampleContiRegressionTest(unittest.TestCase):
     def test_example_conti_parses_identically(self) -> None:
         project = parse_conti(ROOT / "example" / "CONTI.md")
-        self.assertEqual([], validate_project(project))
+        violations = validate_project(project)
+        self.assertEqual([], [item for item in violations if item["severity"] == "error"])
+        # 페이스 경고(I12)는 0~2건까지 허용 — 그 외 warning은 없어야 한다.
+        self.assertLessEqual(len([item for item in violations if item["invariant"] == "I12"]), 2)
+        self.assertEqual([], [item for item in violations if item["invariant"] != "I12"])
         plan = compile_render_plan(project)
         self.assertEqual(743.0, plan["total_seconds"])
         self.assertEqual(plan["total_samples"], plan["video"][-1]["end"])
+        # 페이싱 기준: 평균 장면 길이 5~7초
+        average = plan["total_seconds"] / len(plan["video"])
+        self.assertLessEqual(average, 7.0)
+        self.assertGreaterEqual(average, 4.0)
 
 
 if __name__ == "__main__":

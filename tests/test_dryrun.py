@@ -30,23 +30,28 @@ class DryRunTest(unittest.TestCase):
     def test_parse_validate_and_compile_existing_conti(self) -> None:
         project = parse_conti(ROOT / "example" / "CONTI.md")
         violations = validate_project(project)
-        self.assertEqual([], violations)
+        self.assertEqual([], [item for item in violations if item["severity"] == "error"])
+        # 페이스 경고(I12)는 0~2건까지 허용, 그 외 warning은 없어야 한다.
+        self.assertLessEqual(len([item for item in violations if item["invariant"] == "I12"]), 2)
+        self.assertEqual([], [item for item in violations if item["invariant"] != "I12"])
 
         shots = {shot["id"]: shot for shot in project["visuals"]["shots"]}
         self.assertIn("s_reuse_b091_s44_see_and_read", shots)
         self.assertEqual("s44_see_and_read", shots["s_reuse_b091_s44_see_and_read"]["reuse_of"])
-        self.assertEqual({"from": "b008", "to": "b009"}, shots["s09_gtx580"]["cover"])
+        self.assertEqual({"from": "b008", "to": "b008"}, shots["s09_gtx580"]["cover"])
         self.assertEqual({"from": "b013", "to": "b014"}, shots["s_title"]["cover"])
 
         plan = compile_render_plan(project)
         self.assertEqual(743.0, plan["total_seconds"])
-        self.assertGreater(len(plan["video"]), 50)
+        # 페이싱 재컷: 평균 장면 길이 5~7초 → 743초 기준 이벤트 100개 이상
+        self.assertGreater(len(plan["video"]), 100)
+        self.assertLessEqual(plan["total_seconds"] / len(plan["video"]), 7.0)
 
     def test_write_project_materializes_assets_and_exports(self) -> None:
         project = parse_conti(ROOT / "example" / "CONTI.md")
         with tempfile.TemporaryDirectory() as tmp:
             result = write_project(project, tmp)
-            self.assertEqual([], result["violations"])
+            self.assertEqual([], [item for item in result["violations"] if item["severity"] == "error"])
             self.assertTrue((Path(tmp) / "NARRATION.json").exists())
             self.assertTrue((Path(tmp) / "VISUALS.json").exists())
             self.assertTrue((Path(tmp) / "PICKS.json").exists())

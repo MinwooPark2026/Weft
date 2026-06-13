@@ -80,6 +80,38 @@ def validate_project(project: dict[str, Any], picks: dict[str, Any] | None = Non
         prev_id = beat["id"]
         prev_source_end = float(source_start) + float(beat.get("duration", 0))
 
+    # I12 — 페이스 경고(warning): 한 video 이벤트(=한 shot이 화면을 차지하는 구간)가 15초를 넘으면
+    # 시각 정체로 본다. 움직임이 내장된 소스(clip/stock_clip/remotion/hyperframe)는 제외.
+    moving_kinds = {"clip", "stock_clip", "remotion", "hyperframe"}
+    for shot in shots:
+        cover = shot.get("cover")
+        if not isinstance(cover, dict):
+            continue
+        start = cover.get("from")
+        end = cover.get("to")
+        if start not in beat_index or end not in beat_index or beat_index[start] > beat_index[end]:
+            continue
+        if shot.get("source_kind") in moving_kinds:
+            continue
+        seconds = sum(
+            float(beat.get("duration", 0.0)) for beat in beats[beat_index[start] : beat_index[end] + 1]
+        )
+        slot = shot.get("montage_slot")
+        if slot:
+            siblings = montage_groups.get(start, [])
+            total_weight = sum(float(s["montage_slot"].get("weight", 1.0)) for s in siblings) or 1.0
+            seconds *= float(slot.get("weight", 1.0)) / total_weight
+        if seconds > 15.0:
+            violations.append(
+                _violation(
+                    "I12",
+                    "warning",
+                    shot["id"],
+                    f"페이스 경고: {shot['id']}가 {seconds:.1f}초({start}~{end}) — 한 장면이 15초를 초과합니다. "
+                    "▶ 분할·▦ 몽타주·⤴ 빌드업으로 장면을 나눠 보세요",
+                )
+            )
+
     for beat_id, slot_shots in montage_groups.items():
         of_values = {shot["montage_slot"].get("of") for shot in slot_shots}
         if len(of_values) != 1:
