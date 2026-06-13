@@ -201,7 +201,7 @@ provider는 `.env`에서 바꿀 수 있습니다:
 IMAGE_PROVIDER=openai   # openai | gemini | comfyui | stub
 TTS_PROVIDER=typecast   # typecast | stub
 
-OPENAI_IMAGE_MODEL=gpt-image-1-mini       # 기본(최저가). 네이티브 16:9가 필요하면 gpt-image-2
+OPENAI_IMAGE_MODEL=gpt-image-2            # 기본(네이티브 16:9). 더 싸게는 gpt-image-1-mini(2026-12-01 종료)
 GEMINI_API_KEY=                           # IMAGE_PROVIDER=gemini 일 때 (Google AI Studio 키)
 GEMINI_IMAGE_MODEL=gemini-3.1-flash-image # 기본. 저가형 gemini-2.5-flash-image / 고품질 gemini-3-pro-image
 IMAGE_ASPECT=16:9                         # 16:9 | 9:16 | 1:1 | 3:2
@@ -211,7 +211,7 @@ IMAGE_ASPECT=16:9                         # 16:9 | 9:16 | 1:1 | 3:2
 
 이미지 비율(`IMAGE_ASPECT`, 기본 16:9)은 provider가 어떤 크기를 반환하든 저장 시점에 센터 크롭으로 정확히 맞춰집니다. Gemini와 gpt-image-2는 16:9를 네이티브로 생성하고, gpt-image-1 계열은 1536x1024(3:2)로 요청한 뒤 1536x864로 크롭됩니다.
 
-⚠ OpenAI 이미지 모델 종료 일정: `gpt-image-1`은 2026-10-23, `gpt-image-1-mini`/`gpt-image-1.5`는 2026-12-01 서비스 종료 — 이후에는 `gpt-image-2`로 바꿔야 합니다. 모델/provider를 바꾸면 캐시 키가 달라져 `weft images` 재실행 시 이미지가 재생성(재과금)됩니다.
+⚠ 기본 모델은 `gpt-image-2`입니다. 구모델을 선택했다면 종료 일정에 주의하세요: `gpt-image-1`은 2026-10-23, `gpt-image-1-mini`/`gpt-image-1.5`는 2026-12-01 서비스 종료. 모델/provider를 바꾸면 캐시 키가 달라져 `weft images` 재실행 시 이미지가 재생성(재과금)됩니다.
 
 반복 캐릭터: `CHARACTER.png`를 `CONTI.md` 옆(또는 `generated_project` 안)에 두고 shot 프롬프트에 `@char`를 쓰면, OpenAI(`images.edit`)/Gemini(이미지 입력)에 캐릭터 시트가 레퍼런스로 전달되고 마커는 "the recurring channel character exactly as shown in the reference sheet"로 치환됩니다. 다른 경로는 `CHARACTER_SHEET=`로 지정하세요. 시트가 없거나 미지원 provider(comfyui/stub)면 마커만 제거되고 경고가 한 번 출력됩니다. `weft pick` 화면의 재생성 패널에서도 provider/모델을 골라 shot별로 다시 생성할 수 있습니다.
 
@@ -491,7 +491,7 @@ Providers are selectable in `.env`:
 IMAGE_PROVIDER=openai   # openai | gemini | comfyui | stub
 TTS_PROVIDER=typecast   # typecast | stub
 
-OPENAI_IMAGE_MODEL=gpt-image-1-mini       # default (cheapest). Use gpt-image-2 for native 16:9
+OPENAI_IMAGE_MODEL=gpt-image-2            # default (native 16:9). gpt-image-1-mini is cheaper (retires 2026-12-01)
 GEMINI_API_KEY=                           # for IMAGE_PROVIDER=gemini (Google AI Studio key)
 GEMINI_IMAGE_MODEL=gemini-3.1-flash-image # default. Budget: gemini-2.5-flash-image / hero: gemini-3-pro-image
 IMAGE_ASPECT=16:9                         # 16:9 | 9:16 | 1:1 | 3:2
@@ -501,7 +501,7 @@ IMAGE_ASPECT=16:9                         # 16:9 | 9:16 | 1:1 | 3:2
 
 `IMAGE_ASPECT` (default 16:9) is enforced exactly at save time with a center crop, whatever size a provider returns. Gemini and gpt-image-2 generate 16:9 natively; the gpt-image-1 family is requested at 1536x1024 (3:2) and cropped to 1536x864.
 
-⚠ OpenAI image model shutdowns: `gpt-image-1` retires 2026-10-23, `gpt-image-1-mini`/`gpt-image-1.5` on 2026-12-01 — migrate to `gpt-image-2` after that. Changing the model/provider changes cache keys, so the next `weft images` run regenerates (re-bills) existing shots.
+⚠ The default model is `gpt-image-2`. If you pick an older model, mind the shutdowns: `gpt-image-1` retires 2026-10-23, `gpt-image-1-mini`/`gpt-image-1.5` on 2026-12-01. Changing the model/provider changes cache keys, so the next `weft images` run regenerates (re-bills) existing shots.
 
 Recurring character: put a `CHARACTER.png` next to `CONTI.md` (or inside `generated_project`) and write `@char` in a shot prompt — the sheet is sent as a reference image (OpenAI `images.edit` / Gemini image input) and the marker becomes "the recurring channel character exactly as shown in the reference sheet". Use `CHARACTER_SHEET=` for a custom path. Without a sheet or on providers without reference support (comfyui/stub), the marker is stripped with a single warning. The `weft pick` UI's regeneration panel also offers per-shot provider/model dropdowns.
 

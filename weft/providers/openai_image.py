@@ -7,10 +7,11 @@ import os
 from dataclasses import dataclass
 from typing import ClassVar
 
-# Default = cheapest current model. OpenAI deprecation schedule (2026-06 공지):
-# gpt-image-1 은 2026-10-23, gpt-image-1-mini / gpt-image-1.5 / chatgpt-image-latest 는
-# 2026-12-01 서비스 종료 — 이후에는 gpt-image-2 로 전환해야 한다 (네이티브 16:9 지원).
-DEFAULT_MODEL = "gpt-image-1-mini"
+# Default = current flagship with native 16:9 (arbitrary WIDTHxHEIGHT support).
+# OpenAI deprecation schedule (2026-06 공지): gpt-image-1 은 2026-10-23,
+# gpt-image-1-mini / gpt-image-1.5 / chatgpt-image-latest 는 2026-12-01 종료 —
+# 구모델을 선택했다면 그 전에 gpt-image-2 로 돌아와야 한다.
+DEFAULT_MODEL = "gpt-image-2"
 
 # Fixed sizes for the gpt-image-1 family (auto | 1024x1024 | 1536x1024 | 1024x1536):
 # no native 16:9, so we request the closest landscape/portrait size and the
@@ -21,11 +22,13 @@ _LEGACY_SIZES = {
     "1:1": "1024x1024",
     "3:2": "1536x1024",
 }
-# gpt-image-2 accepts arbitrary WIDTHxHEIGHT (16의 배수, 1:3~3:1, 최대 3840x2160),
-# so 16:9 can be requested natively.
+# gpt-image-2 accepts arbitrary WIDTHxHEIGHT but both must be divisible by 16
+# (실측 400: "Width and height must both be divisible by 16"). 1080 은 16의 배수가
+# 아니므로 1920x1088 로 요청하고, 저장 단계의 비율 정규화(센터 크롭)가 정확히
+# 1920x1080(16:9) 으로 잘라낸다.
 _GPT_IMAGE_2_SIZES = {
-    "16:9": "1920x1080",
-    "9:16": "1080x1920",
+    "16:9": "1920x1088",
+    "9:16": "1088x1920",
     "1:1": "1024x1024",
     "3:2": "1536x1024",
 }
@@ -42,7 +45,7 @@ class OpenAIImage:
 
     Returns raw PNG bytes per candidate (the gpt-image family always responds
     with base64, never URLs). When ``size`` is empty it is derived from
-    ``aspect`` per model — gpt-image-2 natively supports 16:9 (1920x1080),
+    ``aspect`` per model — gpt-image-2 natively supports 16:9 (1920x1088, cropped to 1080p),
     older models get the closest fixed size and are center-cropped downstream.
     With ``references`` (e.g. a character sheet) generation goes through
     ``images.edit`` so the model sees the reference image.

@@ -128,8 +128,8 @@ _IMAGE_LABELS: dict[str, Callable[[], str]] = {
 # (comfyui/stub expose their single label instead.)
 KNOWN_IMAGE_MODELS: dict[str, list[str]] = {
     "openai": [
-        OPENAI_DEFAULT_MODEL,  # gpt-image-1-mini — 최저가, 2026-12-01 종료 예정
-        "gpt-image-2",         # 현행 플래그십 — 유일한 네이티브 16:9 (예: 1920x1080)
+        OPENAI_DEFAULT_MODEL,  # gpt-image-2 — 현행 플래그십, 유일한 네이티브 16:9 (예: 1920x1080)
+        "gpt-image-1-mini",    # 최저가 — 2026-12-01 종료 예정
         "gpt-image-1.5",       # 2026-12-01 종료 예정
         "gpt-image-1",         # deprecated — 2026-10-23 종료
         "chatgpt-image-latest",

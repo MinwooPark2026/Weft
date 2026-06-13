@@ -123,14 +123,18 @@ Style: technical blueprint / engineering schematic illustration with precise dra
 - 이미지 생성 API의 레퍼런스 입력(`images.edit`의 `image=` 인자)은 **이미지 파일만** 받는다. PDF나 여러 페이지 문서는 그대로 넣을 수 없다.
 - 4뷰가 **한 캔버스**에 있어야 모델이 한 번에 캐릭터의 입체 구조(앞·옆·뒤 생김새)를 파악한다 — 뷰를 4개 파일로 쪼개는 것보다 한 장이 일관성에 유리하다.
 
-**예시 파일:** [`STYLE_GUIDE_assets/clay-cat.CHARACTER.png`](STYLE_GUIDE_assets/clay-cat.CHARACTER.png) — 클레이 질감의 흰색 터키쉬 앙고라 장모 고양이, 4뷰 (위 예시 B 클레이 스타일과 짝).
+**예시 파일:** [`STYLE_GUIDE_assets/clay-cat.CHARACTER.png`](STYLE_GUIDE_assets/clay-cat.CHARACTER.png) — 클레이 질감의 흰색 터키쉬 앙고라 장모 고양이, 4뷰, **오드아이**(고양이 자신의 왼쪽 눈이 노랑 = 정면 뷰에서 보는 사람 기준 오른쪽이 노랑, 왼쪽이 파랑). gpt-image-2 생성 (위 예시 B 클레이 스타일과 짝).
+
+> 좌우가 있는 특징(오드아이, 무늬, 흉터 등)은 프롬프트에 **"in the front-facing view, the eye on the
+> viewer's LEFT is …"** 처럼 **보는 사람 기준**으로 못 박아야 한다 — "the cat's left eye"라고 쓰면
+> 모델이 캐릭터 기준/화면 기준을 멋대로 해석해 좌우가 뒤집히기 쉽다.
 
 ![클레이 고양이 캐릭터 시트](STYLE_GUIDE_assets/clay-cat.CHARACTER.png)
 
 **사용법:**
 1. 캐릭터 시트 PNG를 프로젝트 폴더에 **`CHARACTER.png`** 라는 이름으로 복사한다 (CONTI.md 옆) — 예: `cp STYLE_GUIDE_assets/clay-cat.CHARACTER.png <project>/CHARACTER.png`.
 2. 캐릭터가 등장할 컷의 이미지 프롬프트에 **`@char`** 마커를 쓴다 — 예: `@char sitting on a clay bookshelf, three-quarter pose`.
-3. 생성 시 `CHARACTER.png`가 레퍼런스 이미지로 함께 전달되어 모든 컷에서 같은 캐릭터가 유지된다. *(프로바이더 연동은 병행 구현 중 — 연동 전에는 마커와 파일을 미리 준비해 두면 된다.)*
+3. 생성 시 `CHARACTER.png`가 레퍼런스 이미지로 함께 전달되어 모든 컷에서 같은 캐릭터가 유지된다 (OpenAI는 `images.edit`, Gemini는 이미지 입력으로 — comfyui/stub은 미지원이라 마커만 제거된다).
 
 **새 캐릭터용 프롬프트 템플릿** (영어, `images.generate`에 그대로 사용 — landscape 권장):
 ```

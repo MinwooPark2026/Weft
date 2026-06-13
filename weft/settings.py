@@ -24,10 +24,10 @@ IMAGE_QUALITY=medium
 IMAGE_ASPECT=16:9
 # IMAGE_SIZE: 보통 비워 둔다(IMAGE_ASPECT 로 자동 결정). openai 요청 크기 강제용.
 #IMAGE_SIZE=
-# OpenAI 모델. 기본 gpt-image-1-mini(최저가).
-# ⚠ OpenAI 종료 일정: gpt-image-1 은 2026-10-23, gpt-image-1-mini/1.5 는 2026-12-01 종료
-#   → 이후에는 gpt-image-2 로 바꿔야 한다 (gpt-image-2 만 네이티브 16:9, 예: 1920x1080).
-#OPENAI_IMAGE_MODEL=gpt-image-1-mini
+# OpenAI 모델. 기본 gpt-image-2(현행 플래그십, 네이티브 16:9 — 예: 1920x1080).
+# 더 싸게: gpt-image-1-mini — 단 ⚠ 종료 일정 주의: gpt-image-1 은 2026-10-23,
+# gpt-image-1-mini/1.5 는 2026-12-01 종료(이후 gpt-image-2 만 남음).
+#OPENAI_IMAGE_MODEL=gpt-image-2
 # Gemini 모델 (IMAGE_PROVIDER=gemini 일 때). 기본 gemini-3.1-flash-image.
 # 저가형: gemini-2.5-flash-image / 고품질·4K: gemini-3-pro-image. 키는 .env 의 GEMINI_API_KEY.
 #GEMINI_IMAGE_MODEL=gemini-3.1-flash-image

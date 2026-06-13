@@ -131,8 +131,9 @@ candidate_003… 으로 **추가**되고 VISUALS.json·PROMPT.md·`.key` 가 자
 
 - 재생성 대상이 **5 shot 이상**이면 실행 전에 멈추고 사용자 확인을 받는다:
   `weft images <project> --shots ... --estimate` 로 **API 호출 없이** 생성 장수
-  (shot 수 × 후보 n)를 미리 보여준다. gpt-image-1 기준 대략 medium·1536×1024 ≈ 장당
-  $0.06 안팎(low ≈ $0.02, high ≈ $0.25; 정확 단가는 OpenAI 가격표)으로 예상 비용을 언급한다.
+  (shot 수 × 후보 n)를 미리 보여준다. 기본 모델 gpt-image-2 기준 대략 medium·1920×1080 ≈
+  장당 $0.05~0.1 (low ≈ $0.01, high ≈ $0.2+; 해상도에 비례 — 정확 단가는 OpenAI 가격표)으로
+  예상 비용을 언급한다.
 - 5 미만이어도 `--force` 전체 재생성·STYLE.txt 변경은 항상 사전 확인.
 
 ## 모드 B — 렌더 검수 (`weft ffmpeg` 후)

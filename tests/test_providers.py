@@ -241,7 +241,7 @@ class RegistryTest(unittest.TestCase):
     def test_image_provider_label_resolves_without_api_keys(self) -> None:
         env = {"OPENAI_IMAGE_MODEL": "", "GEMINI_IMAGE_MODEL": "", "COMFYUI_WORKFLOW": "/x/wf_api.json"}
         with patch.dict(os.environ, env, clear=False):
-            self.assertEqual("gpt-image-1-mini", image_provider_label("openai"))  # 기본값 = 미니 모델
+            self.assertEqual("gpt-image-2", image_provider_label("openai"))  # 기본값 = 현행 플래그십
             self.assertEqual("gemini-3.1-flash-image", image_provider_label("gemini"))
             self.assertEqual("wf_api.json", image_provider_label("comfyui"))
             self.assertEqual("stub-image", image_provider_label("stub"))
@@ -513,16 +513,18 @@ class GeminiImageTest(unittest.TestCase):
 
 
 class OpenAIImageModelTest(unittest.TestCase):
-    def test_default_model_is_mini_and_size_derived_from_aspect(self) -> None:
+    def test_default_model_is_flagship_with_native_aspect_size(self) -> None:
         provider = OpenAIImage(api_key="k")
-        self.assertEqual("gpt-image-1-mini", provider.model)
-        self.assertEqual("1536x1024", provider.size)  # 16:9 네이티브 없음 → 최근접 후 크롭
+        self.assertEqual("gpt-image-2", provider.model)
+        self.assertEqual("1920x1088", provider.size)  # 16의 배수 제약 → 저장 시 1920x1080 크롭
 
         portrait = OpenAIImage(api_key="k", aspect="9:16")
-        self.assertEqual("1024x1536", portrait.size)
+        self.assertEqual("1088x1920", portrait.size)
 
-        native = OpenAIImage(api_key="k", model="gpt-image-2", aspect="16:9")
-        self.assertEqual("1920x1080", native.size)  # gpt-image-2 만 네이티브 16:9
+        legacy = OpenAIImage(api_key="k", model="gpt-image-1-mini", aspect="16:9")
+        self.assertEqual("1536x1024", legacy.size)  # 구모델: 16:9 네이티브 없음 → 최근접 후 크롭
+        legacy_portrait = OpenAIImage(api_key="k", model="gpt-image-1-mini", aspect="9:16")
+        self.assertEqual("1024x1536", legacy_portrait.size)
 
     def test_explicit_size_wins_over_aspect(self) -> None:
         provider = OpenAIImage(api_key="k", size="1024x1024", aspect="16:9")
