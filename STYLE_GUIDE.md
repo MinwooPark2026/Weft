@@ -123,13 +123,18 @@ Style: technical blueprint / engineering schematic illustration with precise dra
 - 이미지 생성 API의 레퍼런스 입력(`images.edit`의 `image=` 인자)은 **이미지 파일만** 받는다. PDF나 여러 페이지 문서는 그대로 넣을 수 없다.
 - 4뷰가 **한 캔버스**에 있어야 모델이 한 번에 캐릭터의 입체 구조(앞·옆·뒤 생김새)를 파악한다 — 뷰를 4개 파일로 쪼개는 것보다 한 장이 일관성에 유리하다.
 
-**예시 파일:** [`STYLE_GUIDE_assets/clay-cat.CHARACTER.png`](STYLE_GUIDE_assets/clay-cat.CHARACTER.png) — 클레이 질감의 흰색 터키쉬 앙고라 장모 고양이, 4뷰, **오드아이**(고양이 자신의 왼쪽 눈이 노랑 = 정면 뷰에서 보는 사람 기준 오른쪽이 노랑, 왼쪽이 파랑). gpt-image-2 생성 (위 예시 B 클레이 스타일과 짝).
+**예시 파일** (둘 다 같은 캐릭터 — 흰색 터키쉬 앙고라 장모, **오드아이**: 고양이 자신의 왼쪽 눈이 노랑 = 정면 뷰에서 보는 사람 기준 오른쪽이 노랑, 왼쪽이 파랑. gpt-image-2 생성):
+
+- [`STYLE_GUIDE_assets/clay-cat.CHARACTER.png`](STYLE_GUIDE_assets/clay-cat.CHARACTER.png) — 클레이 질감, 4족 앉은 포즈 (`soft-clay.STYLE.txt`와 짝). 도식·은유 중심 채널용.
+- [`STYLE_GUIDE_assets/anime-cat.CHARACTER.png`](STYLE_GUIDE_assets/anime-cat.CHARACTER.png) — 셀 셰이딩 2D 카툰, **직립 2족(의인화)** 기본형 (`cel-anime.STYLE.txt`와 짝). **역할 연기 채널용**: 시트는 의상 없는 기본형으로 두고, `@char` 프롬프트에 의상·소품·배경 무드만 쓰면 같은 캐릭터가 액션 히어로(수트)·무협 협객(도포와 검)·아이돌(무대의상과 헤드셋) 등으로 갈아입는다 — 세 역할 모두 동일 캐릭터·동일 오드아이로 생성됨을 검증했다.
 
 > 좌우가 있는 특징(오드아이, 무늬, 흉터 등)은 프롬프트에 **"in the front-facing view, the eye on the
 > viewer's LEFT is …"** 처럼 **보는 사람 기준**으로 못 박아야 한다 — "the cat's left eye"라고 쓰면
 > 모델이 캐릭터 기준/화면 기준을 멋대로 해석해 좌우가 뒤집히기 쉽다.
 
 ![클레이 고양이 캐릭터 시트](STYLE_GUIDE_assets/clay-cat.CHARACTER.png)
+
+![셀 애니메이션 고양이 캐릭터 시트](STYLE_GUIDE_assets/anime-cat.CHARACTER.png)
 
 **사용법:**
 1. 캐릭터 시트 PNG를 프로젝트 폴더에 **`CHARACTER.png`** 라는 이름으로 복사한다 (CONTI.md 옆) — 예: `cp STYLE_GUIDE_assets/clay-cat.CHARACTER.png <project>/CHARACTER.png`.

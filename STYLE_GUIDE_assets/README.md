@@ -17,7 +17,9 @@ cd my-video && weft images
 | `watercolor.STYLE.txt` | 수채 그림책 |
 | `risograph.STYLE.txt` | 레트로 리소그래프 |
 | `blueprint.STYLE.txt` | 블루프린트 / 테크니컬 |
+| `cel-anime.STYLE.txt` | 셀 셰이딩 2D 카툰 — 캐릭터 채널용(팔레트는 장면 무드에 따름) |
 
 > 각 파일은 **순수 `Style:` 문자열 한 줄**뿐입니다. 이 내용은 통째로 모든 이미지 프롬프트에 붙으므로, 파일 안에 주석이나 설명을 넣지 마세요. 4축 설명·예시 이미지·직접 만드는 법은 [`../STYLE_GUIDE.md`](../STYLE_GUIDE.md) 참고.
 
 `cat_diagram_3b1b.png` / `cat_clay_soft3d.png` 는 가이드에서 쓰는 비교용 예시 이미지입니다.
+`clay-cat.CHARACTER.png` / `anime-cat.CHARACTER.png` 는 캐릭터 턴어라운드 시트 예시 — [`../STYLE_GUIDE.md`](../STYLE_GUIDE.md) §8 참고.
