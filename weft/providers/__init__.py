@@ -8,6 +8,21 @@ can skip re-billing unchanged inputs.
 from __future__ import annotations
 
 from .env import load_env
-from .registry import create_image_provider, create_tts_provider, image_provider_label
+from .registry import (
+    IMAGE_ASPECTS,
+    aspect_ratio,
+    create_image_provider,
+    create_tts_provider,
+    image_provider_label,
+    image_provider_options,
+)
 
-__all__ = ["create_image_provider", "create_tts_provider", "image_provider_label", "load_env"]
+__all__ = [
+    "IMAGE_ASPECTS",
+    "aspect_ratio",
+    "create_image_provider",
+    "create_tts_provider",
+    "image_provider_label",
+    "image_provider_options",
+    "load_env",
+]

@@ -1,9 +1,12 @@
-"""Provider-layer tests: ComfyUI (mocked urllib — never a real server),
-the registry dictionary, and the legacy ``images/openai`` layout fallback.
+"""Provider-layer tests: ComfyUI/Gemini (mocked urllib — never a real server),
+the registry dictionary, aspect normalization, the @char character-sheet hook,
+and the legacy ``images/openai`` layout fallback.
 """
 
 from __future__ import annotations
 
+import base64
+import io
 import json
 import os
 import tempfile
@@ -11,16 +14,41 @@ import unittest
 import urllib.parse
 from pathlib import Path
 from unittest.mock import Mock, patch
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 
-from weft.assets import GEN_IMG_SUBDIR, IMG_SUBDIRS, LEGACY_IMG_SUBDIRS, generate_images
+from weft.assets import (
+    GEN_IMG_SUBDIR,
+    IMG_SUBDIRS,
+    LEGACY_IMG_SUBDIRS,
+    append_candidates,
+    conform_to_aspect,
+    find_character_sheet,
+    generate_images,
+)
 from weft.picker.server import _save_pick, build_state
 from weft.providers.comfyui_image import ComfyUIImage
+from weft.providers.gemini_image import GeminiImage
+from weft.providers.openai_image import OpenAIImage
 from weft.providers.registry import (
     create_image_provider,
     create_tts_provider,
     image_provider_label,
+    image_provider_options,
 )
+
+
+def _png_bytes(width: int, height: int, color=(200, 100, 50)) -> bytes:
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (width, height), color).save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def _png_size(blob: bytes) -> tuple[int, int]:
+    from PIL import Image
+
+    return Image.open(io.BytesIO(blob)).size
 
 WORKFLOW = {
     "3": {"class_type": "KSampler", "inputs": {"seed": 42, "steps": 20, "positive": ["6", 0]}},
@@ -207,16 +235,38 @@ class RegistryTest(unittest.TestCase):
         with self.assertRaises(RuntimeError) as ctx:
             create_image_provider(provider_name="dalle")
         message = str(ctx.exception)
-        for name in ("openai", "comfyui", "stub"):
+        for name in ("openai", "gemini", "comfyui", "stub"):
             self.assertIn(name, message)
 
     def test_image_provider_label_resolves_without_api_keys(self) -> None:
-        with patch.dict(os.environ, {"OPENAI_IMAGE_MODEL": "", "COMFYUI_WORKFLOW": "/x/wf_api.json"}, clear=False):
-            self.assertEqual("gpt-image-1", image_provider_label("openai"))
+        env = {"OPENAI_IMAGE_MODEL": "", "GEMINI_IMAGE_MODEL": "", "COMFYUI_WORKFLOW": "/x/wf_api.json"}
+        with patch.dict(os.environ, env, clear=False):
+            self.assertEqual("gpt-image-1-mini", image_provider_label("openai"))  # 기본값 = 미니 모델
+            self.assertEqual("gemini-3.1-flash-image", image_provider_label("gemini"))
             self.assertEqual("wf_api.json", image_provider_label("comfyui"))
             self.assertEqual("stub-image", image_provider_label("stub"))
         with self.assertRaises(RuntimeError):
             image_provider_label("dalle")
+
+    def test_image_provider_options_lists_models_and_defaults(self) -> None:
+        env = {
+            "IMAGE_PROVIDER": "gemini",
+            "OPENAI_IMAGE_MODEL": "",
+            "GEMINI_IMAGE_MODEL": "gemini-3-pro-image",
+            "IMAGE_ASPECT": "",
+        }
+        with patch.dict(os.environ, env, clear=False):
+            options = image_provider_options()
+        self.assertEqual("gemini", options["provider"])
+        self.assertEqual("gemini-3-pro-image", options["model"])
+        self.assertEqual("16:9", options["aspect"])
+        by_name = {p["name"]: p for p in options["providers"]}
+        self.assertEqual({"openai", "gemini", "comfyui", "stub"}, set(by_name))
+        # env default first, no duplicates
+        self.assertEqual("gemini-3-pro-image", by_name["gemini"]["models"][0])
+        self.assertEqual(1, by_name["gemini"]["models"].count("gemini-3-pro-image"))
+        self.assertIn("gpt-image-1-mini", by_name["openai"]["models"])
+        self.assertIn("gpt-image-2", by_name["openai"]["models"])
 
     def test_create_tts_provider_stub_and_unknown(self) -> None:
         bundle = create_tts_provider(provider_name="stub")
@@ -326,6 +376,368 @@ class LegacyImageLayoutTest(unittest.TestCase):
             _save_pick(root, "s01", "candidate_001.png")
             picks = json.loads((root / "PICKS.json").read_text(encoding="utf-8"))
             self.assertEqual("images/openai/candidate_001.png", picks["selections"]["s01"])
+
+
+class GeminiImageTest(unittest.TestCase):
+    """Gemini REST provider — urllib is always mocked, never a real API call."""
+
+    @staticmethod
+    def _ok_response(image_bytes: bytes, requests_log: list) -> "Mock":
+        def fake_urlopen(request, timeout=None):
+            requests_log.append(request)
+            payload = {
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {"text": "here you go"},
+                                {"inlineData": {"mimeType": "image/png", "data": base64.b64encode(image_bytes).decode("ascii")}},
+                            ]
+                        }
+                    }
+                ]
+            }
+            return _FakeResponse(json.dumps(payload).encode("utf-8"))
+
+        return fake_urlopen
+
+    def test_generate_requests_native_aspect_and_decodes_b64(self) -> None:
+        requests_log: list = []
+        provider = GeminiImage(api_key="k", model="gemini-3.1-flash-image", aspect="16:9", image_size="1K")
+        with patch("weft.providers.gemini_image.urlopen", self._ok_response(b"PNGDATA", requests_log)):
+            blobs = provider.generate("a cat", n=2)
+
+        self.assertEqual([b"PNGDATA", b"PNGDATA"], blobs)
+        self.assertEqual(2, len(requests_log))  # one generateContent call per candidate
+        request = requests_log[0]
+        self.assertIn("models/gemini-3.1-flash-image:generateContent", request.full_url)
+        self.assertEqual("k", request.headers.get("X-goog-api-key"))
+        body = json.loads(request.data.decode("utf-8"))
+        self.assertEqual("a cat", body["contents"][0]["parts"][0]["text"])
+        image_cfg = body["generationConfig"]["responseFormat"]["image"]
+        self.assertEqual("16:9", image_cfg["aspectRatio"])  # 16:9 는 네이티브 지정
+        self.assertEqual("1K", image_cfg["imageSize"])
+
+    def test_25_flash_image_omits_image_size(self) -> None:
+        requests_log: list = []
+        provider = GeminiImage(api_key="k", model="gemini-2.5-flash-image", aspect="16:9")
+        with patch("weft.providers.gemini_image.urlopen", self._ok_response(b"PNG", requests_log)):
+            provider.generate("p", n=1)
+        body = json.loads(requests_log[0].data.decode("utf-8"))
+        self.assertNotIn("imageSize", body["generationConfig"]["responseFormat"]["image"])
+
+    def test_reference_images_are_inlined(self) -> None:
+        requests_log: list = []
+        provider = GeminiImage(api_key="k")
+        with patch("weft.providers.gemini_image.urlopen", self._ok_response(b"PNG", requests_log)):
+            provider.generate("with char", n=1, references=[b"SHEET"])
+        parts = json.loads(requests_log[0].data.decode("utf-8"))["contents"][0]["parts"]
+        self.assertEqual(2, len(parts))
+        self.assertEqual(base64.b64encode(b"SHEET").decode("ascii"), parts[1]["inline_data"]["data"])
+        self.assertEqual("image/png", parts[1]["inline_data"]["mime_type"])
+
+    def test_missing_key_raises_korean_error(self) -> None:
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "", "GOOGLE_API_KEY": ""}, clear=False):
+            with self.assertRaises(RuntimeError) as ctx:
+                GeminiImage.from_env()
+        self.assertIn("GEMINI_API_KEY", str(ctx.exception))
+        self.assertIn("비어 있습니다", str(ctx.exception))
+
+    def test_from_env_prefers_google_api_key_and_reads_model(self) -> None:
+        env = {
+            "GOOGLE_API_KEY": "google-key",
+            "GEMINI_API_KEY": "gemini-key",
+            "GEMINI_IMAGE_MODEL": "gemini-3-pro-image",
+            "IMAGE_ASPECT": "9:16",
+            "GEMINI_IMAGE_SIZE": "2K",
+        }
+        with patch.dict(os.environ, env, clear=False):
+            provider = GeminiImage.from_env()
+        self.assertEqual("google-key", provider.api_key)  # SDK 규칙: GOOGLE_API_KEY 우선
+        self.assertEqual("gemini-3-pro-image", provider.model)
+        self.assertEqual("9:16", provider.aspect)
+        self.assertEqual("2K", provider.image_size)
+
+    def test_http_error_raises_korean_error(self) -> None:
+        def fail(request, timeout=None):
+            raise HTTPError(request.full_url, 403, "forbidden", None, io.BytesIO(b"denied"))
+
+        provider = GeminiImage(api_key="bad")
+        with patch("weft.providers.gemini_image.urlopen", fail):
+            with self.assertRaises(RuntimeError) as ctx:
+                provider.generate("p", n=1)
+        message = str(ctx.exception)
+        self.assertIn("HTTP 403", message)
+        self.assertIn("GEMINI_API_KEY", message)
+
+    def test_400_falls_back_to_legacy_image_config_shape(self) -> None:
+        requests_log: list = []
+        ok = self._ok_response(b"PNG", requests_log)
+
+        def fake_urlopen(request, timeout=None):
+            body = json.loads(request.data.decode("utf-8"))
+            if "responseFormat" in body["generationConfig"]:
+                raise HTTPError(request.full_url, 400, "bad", None, io.BytesIO(b"unknown field responseFormat"))
+            return ok(request, timeout)
+
+        provider = GeminiImage(api_key="k", aspect="16:9")
+        with patch("weft.providers.gemini_image.urlopen", fake_urlopen):
+            blobs = provider.generate("p", n=1)
+        self.assertEqual([b"PNG"], blobs)
+        legacy_body = json.loads(requests_log[0].data.decode("utf-8"))
+        self.assertEqual("16:9", legacy_body["generationConfig"]["imageConfig"]["aspectRatio"])
+
+    def test_connection_error_raises_korean_error(self) -> None:
+        provider = GeminiImage(api_key="k")
+        with patch("weft.providers.gemini_image.urlopen", side_effect=URLError("no route")):
+            with self.assertRaises(RuntimeError) as ctx:
+                provider.generate("p", n=1)
+        self.assertIn("연결할 수 없습니다", str(ctx.exception))
+
+    def test_blocked_response_without_image_raises_korean_error(self) -> None:
+        def fake_urlopen(request, timeout=None):
+            return _FakeResponse(json.dumps({"candidates": [{"content": {"parts": [{"text": "no"}]}}]}).encode("utf-8"))
+
+        provider = GeminiImage(api_key="k")
+        with patch("weft.providers.gemini_image.urlopen", fake_urlopen):
+            with self.assertRaises(RuntimeError) as ctx:
+                provider.generate("p", n=1)
+        self.assertIn("이미지가 없습니다", str(ctx.exception))
+
+    def test_cache_key_differs_per_model_and_aspect(self) -> None:
+        base = GeminiImage(api_key="k", model="gemini-3.1-flash-image", aspect="16:9")
+        other_model = GeminiImage(api_key="k", model="gemini-3-pro-image", aspect="16:9")
+        other_aspect = GeminiImage(api_key="k", model="gemini-3.1-flash-image", aspect="9:16")
+        self.assertNotEqual(base.cache_key("p"), other_model.cache_key("p"))
+        self.assertNotEqual(base.cache_key("p"), other_aspect.cache_key("p"))
+
+
+class OpenAIImageModelTest(unittest.TestCase):
+    def test_default_model_is_mini_and_size_derived_from_aspect(self) -> None:
+        provider = OpenAIImage(api_key="k")
+        self.assertEqual("gpt-image-1-mini", provider.model)
+        self.assertEqual("1536x1024", provider.size)  # 16:9 네이티브 없음 → 최근접 후 크롭
+
+        portrait = OpenAIImage(api_key="k", aspect="9:16")
+        self.assertEqual("1024x1536", portrait.size)
+
+        native = OpenAIImage(api_key="k", model="gpt-image-2", aspect="16:9")
+        self.assertEqual("1920x1080", native.size)  # gpt-image-2 만 네이티브 16:9
+
+    def test_explicit_size_wins_over_aspect(self) -> None:
+        provider = OpenAIImage(api_key="k", size="1024x1024", aspect="16:9")
+        self.assertEqual("1024x1024", provider.size)
+
+    def test_cache_key_includes_model(self) -> None:
+        mini = OpenAIImage(api_key="k", model="gpt-image-1-mini")
+        flagship = OpenAIImage(api_key="k", model="gpt-image-2")
+        self.assertNotEqual(mini.cache_key("p"), flagship.cache_key("p"))
+
+    def test_references_route_through_images_edit(self) -> None:
+        provider = OpenAIImage(api_key="k", model="gpt-image-1-mini", aspect="16:9")
+        client = Mock()
+        item = Mock()
+        item.b64_json = base64.b64encode(b"EDITED").decode("ascii")
+        client.images.edit.return_value = Mock(data=[item])
+        provider._client = client
+
+        blobs = provider.generate("prompt with char", n=1, references=[b"SHEET"])
+
+        self.assertEqual([b"EDITED"], blobs)
+        client.images.generate.assert_not_called()
+        kwargs = client.images.edit.call_args.kwargs
+        self.assertEqual("gpt-image-1-mini", kwargs["model"])
+        self.assertEqual("1536x1024", kwargs["size"])
+        self.assertEqual(b"SHEET", kwargs["image"].read())
+
+
+class AspectNormalizationTest(unittest.TestCase):
+    def test_center_crop_to_exact_16_9(self) -> None:
+        out = conform_to_aspect(_png_bytes(1536, 1024), "16:9")
+        self.assertEqual((1536, 864), _png_size(out))  # openai 3:2 → 정확한 16:9
+
+    def test_matching_image_passes_through_unchanged(self) -> None:
+        blob = _png_bytes(1280, 720)
+        self.assertIs(blob, conform_to_aspect(blob, "16:9"))  # 무변환 (re-encode 없음)
+
+    def test_non_image_bytes_pass_through(self) -> None:
+        self.assertEqual(b"not-a-png", conform_to_aspect(b"not-a-png", "16:9"))
+
+    def test_invalid_aspect_raises_korean_error(self) -> None:
+        with self.assertRaises(RuntimeError) as ctx:
+            conform_to_aspect(_png_bytes(64, 64), "4:3")
+        self.assertIn("IMAGE_ASPECT", str(ctx.exception))
+
+    def test_generate_images_stores_exact_aspect_for_any_provider_size(self) -> None:
+        class OddSizeProvider:
+            def __init__(self, **_kwargs) -> None:
+                pass
+
+            def cache_key(self, _prompt: str) -> str:
+                return "odd-key"
+
+            def generate(self, _prompt: str, n: int = 2) -> list[bytes]:
+                return [_png_bytes(1376, 768) for _ in range(n)]  # gemini 1K-ish, not exact 16:9
+
+        env = {"IMAGE_PROVIDER": "openai", "OPENAI_API_KEY": "t", "IMAGE_ASPECT": "16:9", "IMAGE_SIZE": ""}
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, env, clear=False):
+            root = Path(tmp)
+            (root / "VISUALS.json").write_text(
+                json.dumps({"schema": "weft-visual-v1", "shots": [{"id": "s01", "source_kind": "image", "prompt": "p"}]}),
+                encoding="utf-8",
+            )
+            (root / "PICKS.json").write_text(
+                json.dumps({"schema": "weft-picks-v1", "selections": {}, "auto_picked": [], "overridden": []}),
+                encoding="utf-8",
+            )
+            with patch("weft.providers.registry.OpenAIImage", OddSizeProvider):
+                summary = generate_images(root, n=1, recompile=False)
+
+            self.assertEqual(1, summary["made"])
+            self.assertEqual("16:9", summary["aspect"])
+            blob = (root / "SHOTS" / "s01" / GEN_IMG_SUBDIR / "candidate_001.png").read_bytes()
+            width, height = _png_size(blob)
+            self.assertEqual(width * 9, height * 16)  # 저장 시점에 정확히 16:9
+
+    def test_stub_provider_generates_target_aspect_directly(self) -> None:
+        bundle = create_image_provider(provider_name="stub", aspect="16:9")
+        blob = bundle.provider.generate("hello", n=1)[0]
+        width, height = _png_size(blob)
+        self.assertEqual(width * 9, height * 16)
+
+
+class CharacterSheetTest(unittest.TestCase):
+    def _project(self, root: Path, prompt: str) -> None:
+        (root / "VISUALS.json").write_text(
+            json.dumps({"schema": "weft-visual-v1", "shots": [{"id": "s01", "source_kind": "image", "prompt": prompt}]}),
+            encoding="utf-8",
+        )
+        (root / "PICKS.json").write_text(
+            json.dumps({"schema": "weft-picks-v1", "selections": {}, "auto_picked": [], "overridden": []}),
+            encoding="utf-8",
+        )
+
+    def test_find_character_sheet_checks_project_then_parent_and_env_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {"CHARACTER_SHEET": ""}, clear=False):
+            parent = Path(tmp)
+            project = parent / "generated_project"
+            project.mkdir()
+            self.assertIsNone(find_character_sheet(project))
+            (parent / "CHARACTER.png").write_bytes(b"parent-sheet")
+            self.assertEqual(parent / "CHARACTER.png", find_character_sheet(project))
+            (project / "CHARACTER.png").write_bytes(b"project-sheet")
+            self.assertEqual(project / "CHARACTER.png", find_character_sheet(project))
+
+            custom = parent / "hero.png"
+            custom.write_bytes(b"custom")
+            with patch.dict(os.environ, {"CHARACTER_SHEET": str(custom)}, clear=False):
+                self.assertEqual(custom, find_character_sheet(project))
+            with patch.dict(os.environ, {"CHARACTER_SHEET": str(parent / "absent.png")}, clear=False):
+                with self.assertRaises(RuntimeError) as ctx:
+                    find_character_sheet(project)
+            self.assertIn("CHARACTER_SHEET", str(ctx.exception))
+
+    def test_char_marker_passes_sheet_to_supporting_provider(self) -> None:
+        captured: dict = {}
+
+        class RefProvider:
+            supports_reference_images = True
+
+            def __init__(self, **_kwargs) -> None:
+                pass
+
+            def cache_key(self, prompt: str) -> str:
+                captured.setdefault("key_payloads", []).append(prompt)
+                return "ref-key"
+
+            def generate(self, prompt: str, n: int = 2, references=None) -> list[bytes]:
+                captured["prompt"] = prompt
+                captured["references"] = references
+                return [b"img" for _ in range(n)]
+
+        env = {"IMAGE_PROVIDER": "openai", "OPENAI_API_KEY": "t", "CHARACTER_SHEET": ""}
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, env, clear=False):
+            root = Path(tmp)
+            self._project(root, "wide shot of @char waving")
+            (root / "CHARACTER.png").write_bytes(b"SHEETBYTES")
+            with patch("weft.providers.registry.OpenAIImage", RefProvider):
+                generate_images(root, n=1, recompile=False)
+
+        self.assertIn("the recurring channel character exactly as shown in the reference sheet", captured["prompt"])
+        self.assertNotIn("@char", captured["prompt"])
+        self.assertEqual([b"SHEETBYTES"], captured["references"])
+        # 시트 내용이 캐시 키에 들어가 시트가 바뀌면 재생성된다
+        self.assertTrue(any("[charsheet:" in payload for payload in captured["key_payloads"]))
+
+    def test_char_marker_stripped_with_warning_when_unsupported_or_missing(self) -> None:
+        captured: dict = {}
+
+        class PlainProvider:  # no supports_reference_images
+            def __init__(self, **_kwargs) -> None:
+                pass
+
+            def cache_key(self, _prompt: str) -> str:
+                return "plain-key"
+
+            def generate(self, prompt: str, n: int = 2) -> list[bytes]:
+                captured["prompt"] = prompt
+                return [b"img" for _ in range(n)]
+
+        env = {"IMAGE_PROVIDER": "openai", "OPENAI_API_KEY": "t", "CHARACTER_SHEET": ""}
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, env, clear=False):
+            root = Path(tmp)
+            self._project(root, "wide shot of @char waving")
+            with patch("weft.providers.registry.OpenAIImage", PlainProvider):
+                with patch("sys.stdout", new_callable=io.StringIO) as stdout:
+                    summary = generate_images(root, n=1, recompile=False)
+
+        self.assertEqual(1, summary["made"])  # 마커 제거 후 정상 생성
+        self.assertNotIn("@char", captured["prompt"])
+        self.assertNotIn("reference sheet", captured["prompt"])
+        self.assertIn("@char", stdout.getvalue())  # 1회 경고
+
+
+class PickerGenerationOptionsTest(unittest.TestCase):
+    def test_state_includes_provider_and_model_options(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"IMAGE_PROVIDER": "stub", "OPENAI_IMAGE_MODEL": ""}, clear=False
+        ):
+            root = Path(tmp)
+            (root / "VISUALS.json").write_text(
+                json.dumps({"schema": "weft-visual-v1", "shots": []}), encoding="utf-8"
+            )
+            (root / "NARRATION.json").write_text(
+                json.dumps({"schema": "weft-narration-v1", "beats": []}), encoding="utf-8"
+            )
+            (root / "PICKS.json").write_text(
+                json.dumps({"schema": "weft-picks-v1", "selections": {}, "auto_picked": [], "overridden": []}),
+                encoding="utf-8",
+            )
+            state = build_state(root)
+
+        generation = state["generation"]
+        self.assertEqual("stub", generation["provider"])
+        names = {p["name"] for p in generation["providers"]}
+        self.assertEqual({"openai", "gemini", "comfyui", "stub"}, names)
+
+    def test_append_candidates_accepts_provider_and_model_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"IMAGE_PROVIDER": "openai", "IMAGE_ASPECT": "16:9", "IMAGE_SIZE": ""}, clear=False
+        ):
+            root = Path(tmp)
+            (root / "VISUALS.json").write_text(
+                json.dumps({"schema": "weft-visual-v1", "shots": [{"id": "s01", "source_kind": "image", "prompt": "p"}]}),
+                encoding="utf-8",
+            )
+            (root / "SHOTS" / "s01").mkdir(parents=True)
+            # IMAGE_PROVIDER=openai 인데 키 없이도 stub override 로 생성된다
+            result = append_candidates(root, "s01", n=1, provider_name="stub")
+
+            self.assertEqual("stub", result["provider"])
+            self.assertEqual(["candidate_001.png"], result["new"])
+            blob = (root / "SHOTS" / "s01" / GEN_IMG_SUBDIR / "candidate_001.png").read_bytes()
+            width, height = _png_size(blob)
+            self.assertEqual(width * 9, height * 16)
 
 
 if __name__ == "__main__":

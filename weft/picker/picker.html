@@ -72,6 +72,8 @@
 <header>
   <span class="title">🖼 <span id="title">Weft picker</span></span>
   <div class="hdr-right">
+    <select id="prov-select" title="이미지 provider (이번 생성에만 적용)"></select>
+    <select id="model-select" title="모델 (이번 생성에만 적용)"></select>
     <select id="n-select" title="한 번에 생성할 후보 수"><option>1</option><option>2</option><option>3</option></select>
     <button class="primary" id="gen-btn" title="현재 프롬프트로 후보 추가 생성 (G)">+ 생성</button>
     <button class="go" id="build-btn" title="현재 선택으로 CapCut 드래프트 재빌드">🎬 CapCut 빌드</button>
@@ -121,9 +123,23 @@ function overlay(on,txt){$('overlay').classList.toggle('hidden',!on);if(txt)$('o
 
 async function load(keep){
   const d=await (await api('/api/state')).json();
-  S.shots=d.shots; $('title').textContent=d.title||'Weft picker'; $('total').textContent=S.shots.length;
+  S.shots=d.shots; S.gen=d.generation||null; $('title').textContent=d.title||'Weft picker'; $('total').textContent=S.shots.length;
+  renderGenOptions();
   if(keep!=null){const i=S.shots.findIndex(s=>s.shot_id===keep); if(i>=0)S.idx=i;}
   renderSidebar(); go(S.idx);
+}
+function renderGenOptions(){
+  const ps=$('prov-select'), ms=$('model-select');
+  if(!S.gen||!S.gen.providers||!S.gen.providers.length){ps.style.display='none';ms.style.display='none';return;}
+  ps.innerHTML=S.gen.providers.map(p=>`<option value="${esc(p.name)}" ${p.name===S.gen.provider?'selected':''}>${esc(p.name)}</option>`).join('');
+  ps.onchange=()=>renderModelOptions();
+  renderModelOptions();
+}
+function renderModelOptions(){
+  const ps=$('prov-select'), ms=$('model-select');
+  const p=(S.gen.providers||[]).find(x=>x.name===ps.value)||{models:[]};
+  ms.innerHTML=(p.models||[]).map(m=>`<option value="${esc(m)}" ${m===p.default_model?'selected':''}>${esc(m)}</option>`).join('');
+  ms.disabled=(p.models||[]).length<=1;
 }
 function pickCount(){return S.shots.filter(s=>s.pick).length;}
 function renderSidebar(){
@@ -198,10 +214,12 @@ async function generate(){
   const s=S.shots[S.idx]; if(S.busy)return; S.busy=true; overlay(true,`${s.shot_id} 생성 중…`); $('gen-btn').disabled=true;
   try{
     const n=+$('n-select').value, p=$('prompt')?$('prompt').value.trim():'';
-    const r=await (await api('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shot_id:s.shot_id,n,prompt:p})})).json();
+    const body={shot_id:s.shot_id,n,prompt:p};
+    if(S.gen){body.provider=$('prov-select').value||undefined; body.model=$('model-select').value||undefined;}
+    const r=await (await api('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
     if(!r.ok)throw new Error(r.error);
     s.prompt=p; s.candidates=r.candidates; s.pick=r.pick||r.new[0]||s.pick; S.cur=s.candidates.indexOf(s.pick); renderCards(); renderSidebar();
-    toast(`✓ 생성+선택 ${r.new.join(', ')}`);
+    toast(`✓ 생성+선택 ${r.new.join(', ')}`+(r.model?` (${r.provider}/${r.model})`:''));
   }catch(e){toast('생성 실패: '+e.message,'err');}
   finally{S.busy=false;overlay(false);$('gen-btn').disabled=false;}
 }

@@ -112,3 +112,28 @@ Style: technical blueprint / engineering schematic illustration with precise dra
 - **후보 N장 + picker.** `weft images --n 3` 후 picker(`weft pick`)에서 가장 톤이 맞는 걸 고른다. 톤이 튀는 컷은 picker에서 프롬프트 수정 후 `G`로 재생성.
 - **글자는 이미지에 넣지 말 것.** 연도·라벨·인용은 `❝` 텍스트 카드로(CARDS.json) — 스타일이 바뀌어도 또렷하게 유지.
 - **테스트 먼저.** 새 스타일은 고양이 같은 샘플 1장으로 확인한 뒤 전체에 적용.
+
+---
+
+## 8. 캐릭터 시트 — 채널 공통 캐릭터
+
+여러 영상에 **같은 캐릭터**를 반복 등장시키려면 스타일 문장만으로는 부족하다. 컷마다 모델이 캐릭터를 새로 "발명"하기 때문이다. 해결책은 **캐릭터 턴어라운드 시트** — 한 장의 PNG에 같은 캐릭터의 정면 / ¾ / 측면 / 후면 4뷰를 담아 두고, 이미지 생성 시 레퍼런스로 함께 보내는 것.
+
+**왜 단일 PNG에 4뷰인가 (PDF 불가):**
+- 이미지 생성 API의 레퍼런스 입력(`images.edit`의 `image=` 인자)은 **이미지 파일만** 받는다. PDF나 여러 페이지 문서는 그대로 넣을 수 없다.
+- 4뷰가 **한 캔버스**에 있어야 모델이 한 번에 캐릭터의 입체 구조(앞·옆·뒤 생김새)를 파악한다 — 뷰를 4개 파일로 쪼개는 것보다 한 장이 일관성에 유리하다.
+
+**예시 파일:** [`STYLE_GUIDE_assets/clay-cat.CHARACTER.png`](STYLE_GUIDE_assets/clay-cat.CHARACTER.png) — 클레이 질감의 흰색 터키쉬 앙고라 장모 고양이, 4뷰 (위 예시 B 클레이 스타일과 짝).
+
+![클레이 고양이 캐릭터 시트](STYLE_GUIDE_assets/clay-cat.CHARACTER.png)
+
+**사용법:**
+1. 캐릭터 시트 PNG를 프로젝트 폴더에 **`CHARACTER.png`** 라는 이름으로 복사한다 (CONTI.md 옆) — 예: `cp STYLE_GUIDE_assets/clay-cat.CHARACTER.png <project>/CHARACTER.png`.
+2. 캐릭터가 등장할 컷의 이미지 프롬프트에 **`@char`** 마커를 쓴다 — 예: `@char sitting on a clay bookshelf, three-quarter pose`.
+3. 생성 시 `CHARACTER.png`가 레퍼런스 이미지로 함께 전달되어 모든 컷에서 같은 캐릭터가 유지된다. *(프로바이더 연동은 병행 구현 중 — 연동 전에는 마커와 파일을 미리 준비해 두면 된다.)*
+
+**새 캐릭터용 프롬프트 템플릿** (영어, `images.generate`에 그대로 사용 — landscape 권장):
+```
+Character design reference sheet (turnaround sheet) of ONE single <캐릭터 한 줄 설명> character, shown four times side by side on one canvas: front view, three-quarter view, side profile view, and back view. The exact same character in every view, standing in a neutral upright pose. The character is <외형 상세: 색·털/재질·눈·꼬리 등>; <스타일 질감: 예. soft handcrafted claymation texture, matte modeling clay, rounded sculpted forms>. Consistent proportions, size, and details across all four views. Plain light warm-gray seamless studio background, soft even studio lighting, gentle contact shadows. No text, no labels, no letters, no numbers, no arrows, no annotations anywhere in the image.
+```
+> 팁: 시트의 질감·배경 묘사를 채널 `STYLE.txt`의 어휘와 맞춰 두면(예: 클레이 채널이면 claymation 질감) 본편 컷과 캐릭터가 자연스럽게 섞인다. 생성 후 4뷰가 같은 캐릭터인지 눈으로 확인하고, 어긋나면 어긋난 부분(털 길이·눈 색 등)을 프롬프트에 더 구체적으로 박아 재생성.

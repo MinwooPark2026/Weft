@@ -2,11 +2,21 @@ from __future__ import annotations
 
 import html
 import json
+import os
 from pathlib import Path
 from typing import Any
 
 from .compiler import compile_render_plan, write_exports
 from .validate import validate_project
+
+# Dryrun placeholder canvas per IMAGE_ASPECT — matches the ratio real
+# candidates are normalized to, so dryrun layout previews are faithful.
+_PLACEHOLDER_SIZES = {
+    "16:9": (1280, 720),
+    "9:16": (720, 1280),
+    "1:1": (1024, 1024),
+    "3:2": (1230, 820),
+}
 
 # Shot image layout. New generations always land in the provider-neutral
 # ``images/gen/`` so switching IMAGE_PROVIDER keeps caches and picks (the .key
@@ -40,6 +50,7 @@ def _write_json(path: Path, payload: Any) -> None:
 
 
 def _write_shots(project: dict[str, Any], output_dir: Path, *, materialize_assets: bool) -> None:
+    size = _placeholder_size(output_dir)
     for shot in project["visuals"]["shots"]:
         shot_dir = output_dir / "SHOTS" / shot["id"]
         shot_dir.mkdir(parents=True, exist_ok=True)
@@ -58,7 +69,7 @@ def _write_shots(project: dict[str, Any], output_dir: Path, *, materialize_asset
         if materialize_assets and shot.get("source_kind") not in {"reuse", "clip", "stock_clip", "remotion", "hyperframe"}:
             asset = shot_dir / DRYRUN_IMG_SUBDIR / "candidate_001.svg"
             asset.parent.mkdir(parents=True, exist_ok=True)
-            asset.write_text(_placeholder_svg(shot), encoding="utf-8")
+            asset.write_text(_placeholder_svg(shot, size), encoding="utf-8")
 
 
 def _build_picks(project: dict[str, Any], output_dir: Path, *, materialize_assets: bool) -> dict[str, Any]:
@@ -82,7 +93,17 @@ def _build_picks(project: dict[str, Any], output_dir: Path, *, materialize_asset
     }
 
 
-def _placeholder_svg(shot: dict[str, Any]) -> str:
+def _placeholder_size(output_dir: Path | None = None) -> tuple[int, int]:
+    """Placeholder canvas for the active IMAGE_ASPECT (env → WEFT_SETTINGS.txt; lenient)."""
+    aspect = os.environ.get("IMAGE_ASPECT", "").strip()
+    if not aspect and output_dir is not None:
+        from .settings import load_project_settings  # local import: no cycle at module load
+
+        aspect = load_project_settings(output_dir).get("IMAGE_ASPECT", "").strip()
+    return _PLACEHOLDER_SIZES.get(aspect or "16:9", _PLACEHOLDER_SIZES["16:9"])
+
+
+def _placeholder_svg(shot: dict[str, Any], size: tuple[int, int] | None = None) -> str:
     title = html.escape(shot["id"])
     kind = html.escape(shot.get("source_kind", "image"))
     prompt = html.escape((shot.get("prompt") or "").replace("\n", " ")[:180])
@@ -96,12 +117,13 @@ def _placeholder_svg(shot: dict[str, Any]) -> str:
         "hyperframe": "#111827",
     }.get(shot.get("source_kind", "image"), "#f6ead2")
     text_color = "#f8fafc" if shot.get("source_kind") in {"text_card", "screen_element"} else "#2f2a22"
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
-  <rect width="1280" height="720" fill="{color}"/>
-  <rect x="64" y="64" width="1152" height="592" fill="none" stroke="{text_color}" stroke-width="4" opacity="0.35"/>
+    width, height = size or _placeholder_size()
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+  <rect width="{width}" height="{height}" fill="{color}"/>
+  <rect x="64" y="64" width="{width - 128}" height="{height - 128}" fill="none" stroke="{text_color}" stroke-width="4" opacity="0.35"/>
   <text x="96" y="142" fill="{text_color}" font-family="Arial, sans-serif" font-size="42" font-weight="700">{title}</text>
   <text x="96" y="202" fill="{text_color}" font-family="Arial, sans-serif" font-size="28">dryrun {kind}</text>
-  <foreignObject x="96" y="250" width="1088" height="330">
+  <foreignObject x="96" y="250" width="{width - 192}" height="{height - 390}">
     <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: Arial, sans-serif; font-size: 30px; line-height: 1.35; color: {text_color};">{prompt}</div>
   </foreignObject>
 </svg>

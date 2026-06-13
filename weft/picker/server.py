@@ -20,6 +20,9 @@ from ..assets import (
     _sync_shot_prompt,
 )
 from ..exporters.capcut_draft import capcut_running
+from ..providers import load_env
+from ..providers.registry import image_provider_options
+from ..settings import apply_project_settings
 
 HTML_PATH = Path(__file__).resolve().parent / "picker.html"
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
@@ -111,9 +114,15 @@ def build_state(project_dir: Path) -> dict:
             "candidate_paths": {c: _candidate_rel(project_dir, sid, c) for c in cands},
             "pick": pick,
         })
+    # Resolve .env + WEFT_SETTINGS.txt so the dropdown defaults reflect the
+    # project's configuration, not just the shell environment.
+    load_env()
+    apply_project_settings(project_dir)
     return {"title": visuals.get("style_bible", "")[:60] or "Weft picker",
             "project_dir": str(project_dir),
             "img_subdir": GEN_IMG_SUBDIR,  # where new generations/uploads land
+            # provider/model choices + current defaults for the regen dropdowns
+            "generation": image_provider_options(),
             "shots": shots}
 
 
@@ -148,8 +157,17 @@ def _save_prompt(project_dir: Path, shot_id: str, prompt: str) -> bool:
     return True
 
 
-def _generate_and_pick(project_dir: Path, shot_id: str, n: int, prompt: str | None) -> dict:
-    result = append_candidates(project_dir, shot_id, n=n, prompt=prompt)
+def _generate_and_pick(
+    project_dir: Path,
+    shot_id: str,
+    n: int,
+    prompt: str | None,
+    provider: str | None = None,
+    model: str | None = None,
+) -> dict:
+    result = append_candidates(
+        project_dir, shot_id, n=n, prompt=prompt, provider_name=provider, model=model
+    )
     if result["new"]:
         _save_pick(project_dir, shot_id, result["new"][0])
         result["pick"] = result["new"][0]
@@ -274,9 +292,12 @@ def _make_handler(project_dir: Path, token: str):
                 b = self._read_json()
                 n = max(1, min(4, int(b.get("n", 1))))
                 r = _generate_and_pick(project_dir, b["shot_id"], n=n,
-                                       prompt=(b.get("prompt") or None))
+                                       prompt=(b.get("prompt") or None),
+                                       provider=(str(b.get("provider") or "").strip().lower() or None),
+                                       model=(str(b.get("model") or "").strip() or None))
                 self._json(200, {"ok": True, "new": r["new"],
                                  "pick": r.get("pick"),
+                                 "provider": r.get("provider"), "model": r.get("model"),
                                  "candidates": _candidates(project_dir, b["shot_id"])}); return
             if path == "/api/external":
                 b = self._read_json()
