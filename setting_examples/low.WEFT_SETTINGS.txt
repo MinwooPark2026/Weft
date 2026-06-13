@@ -33,3 +33,12 @@ FFMPEG_BITRATE=2M
 FFMPEG_NO_MOTION=false
 FFMPEG_NO_AUDIO=false
 FFMPEG_NO_SUBTITLES=false
+
+# BGM (배경음악) — 비워 두면 BGM 없음(기본). 음원(mp3/wav/m4a)은 유튜브 오디오
+# 라이브러리처럼 라이선스가 확보된 파일을 직접 준비. 경로는 CONTI.md 기준 상대 또는 절대.
+# weft ffmpeg 가 나레이션 중 BGM 을 자동으로 낮춥니다(덕킹) — 캡컷 불필요.
+# 막별로 다른 곡은 CONTI.md 옆 BGM.json (BGM_FILE 보다 우선). 한 번만 끄려면 --no-bgm.
+#BGM_FILE=
+#BGM_GAIN_DB=-16
+#BGM_DUCK_DB=-12
+#BGM_FADE_SECONDS=2.0

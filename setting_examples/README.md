@@ -36,8 +36,11 @@ weft ffmpeg --encoder libx264 --crf 34 --width 1280 --height 720
 | `weft ffmpeg --no-subtitles` | `FFMPEG_NO_SUBTITLES=true` |
 | `weft ffmpeg --no-motion` | `FFMPEG_NO_MOTION=true` |
 | `weft ffmpeg --no-audio` | `FFMPEG_NO_AUDIO=true` |
+| `weft ffmpeg --no-bgm` | (일회용 — 설정 키 없음, `BGM_FILE`/`BGM.json` 을 비우면 항상 없음) |
 | `weft capcut --folder my_draft` | `CAPCUT_FOLDER=my_draft` |
 | `weft capcut --no-register` | `CAPCUT_NO_REGISTER=true` |
+
+배경음악은 `BGM_FILE=`(전곡 1개) 또는 `CONTI.md` 옆 `BGM.json`(막별 여러 곡)으로 켭니다 — 기본은 BGM 없음. `weft ffmpeg`가 나레이션 중 자동으로 BGM 을 낮추므로(덕킹) 캡컷이 필요 없습니다. 음량은 `BGM_GAIN_DB`(기본 -16), 덕킹 깊이는 `BGM_DUCK_DB`(기본 -12), 페이드는 `BGM_FADE_SECONDS`(기본 2.0).
 
 API 키는 이 파일에 넣지 말고 `.env`에 둡니다.
 

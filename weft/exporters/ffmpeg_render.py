@@ -15,9 +15,34 @@ from array import array
 from pathlib import Path
 from typing import Any
 
+from ..timecode import parse_timecode
 from .capcut_draft import CANVAS_H, CANVAS_W, FADE_US, ZOOM_RATIO, _make_card_png
 
 DEFAULT_OUTPUT_NAME = "weft_render.mp4"
+
+# ----------------------------------------------------------------------- BGM ---
+# Background music is mixed INSIDE the ffmpeg render (no CapCut round-trip):
+# the narration premix gets its single loudnorm pass first, then that normalized
+# track keys a sidechain compressor that ducks the BGM while narration plays and
+# lets it rise back during ⏸ pauses and gaps.
+BGM_JSON_NAME = "BGM.json"
+BGM_DEFAULT_GAIN_DB = -16.0
+BGM_DEFAULT_DUCK_DB = -12.0
+BGM_DEFAULT_FADE_SECONDS = 2.0
+# 문서상 지원 포맷은 mp3/wav/m4a — 그 외도 ffmpeg 가 디코드 가능한 일반 오디오는 허용.
+_BGM_EXTS = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg", ".opus"}
+
+# Ducking → sidechaincompress mapping rationale:
+# the narration premix is loudnorm'ed to I=-14 LUFS BEFORE the sidechain tap, so
+# active speech averages ~-14 dBFS. With the compressor threshold at -34 dB
+# (linear 0.02), speech rides ~20 dB above threshold; a downward compressor with
+# ratio R then attenuates the BGM by about 20*(1-1/R) dB while speech plays.
+# BGM_DUCK_DB=-12 → R = 20/(20-12) = 2.5. Attack 20 ms dips the BGM as soon as a
+# sentence starts; release 400 ms brings it back smoothly in pauses (no pumping).
+_DUCK_THRESHOLD_DB = -34.0
+_DUCK_HEADROOM_DB = 20.0  # expected speech level above threshold: -14 - (-34)
+_DUCK_ATTACK_MS = 20
+_DUCK_RELEASE_MS = 400
 
 # Long scripts (200+ beats/subtitles) must not scale ffmpeg inputs/filters with N:
 # subtitles are burned from ONE .ass file (libass) and beats are premixed into ONE
@@ -52,6 +77,9 @@ def render_ffmpeg(
     bitrate: str = "8M",
     width: int = CANVAS_W,
     height: int = CANVAS_H,
+    bgm: list[dict[str, Any]] | None = None,
+    bgm_fade_seconds: float = BGM_DEFAULT_FADE_SECONDS,
+    bgm_duck_db: float = BGM_DEFAULT_DUCK_DB,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     project_dir = Path(project_dir)
@@ -80,6 +108,7 @@ def render_ffmpeg(
             _write_ass(ass_path, subtitle_events, width, height, sample_rate)
     audio_events = _audio_events(project_dir, render_plan) if with_audio else []
     audio_mix = _premix_audio(work_dir, audio_events, sample_rate, total_seconds, dry_run=dry_run)
+    bgm_segments = resolve_bgm_segments(bgm, total_seconds) if bgm else []
     # dry_run stays side-effect free: no `ffmpeg -encoders`/filter probes. "auto" maps
     # to the deterministic software encoder so the reported command is still runnable.
     if dry_run:
@@ -106,6 +135,9 @@ def render_ffmpeg(
         bitrate=bitrate,
         width=width,
         height=height,
+        bgm_segments=bgm_segments,
+        bgm_fade_seconds=bgm_fade_seconds,
+        bgm_duck_db=bgm_duck_db,
     )
 
     summary: dict[str, Any] = {
@@ -122,6 +154,17 @@ def render_ffmpeg(
         "width": width,
         "height": height,
     }
+    if bgm_segments:  # 미설정(기본) 출력과 summary 를 동일하게 유지하려고 BGM 키는 조건부
+        summary["bgm_tracks"] = len(bgm_segments)
+        summary["bgm"] = [
+            {
+                "file": Path(segment["path"]).name,
+                "start": round(segment["start"], 3),
+                "end": round(segment["end"], 3),
+                "gain_db": segment["gain_db"],
+            }
+            for segment in bgm_segments
+        ]
     if render_bin != ffmpeg_bin:
         summary["ffmpeg_bin"] = render_bin
     if dry_run:
@@ -150,6 +193,9 @@ def render_ffmpeg(
                 bitrate=bitrate,
                 width=width,
                 height=height,
+                bgm_segments=bgm_segments,
+                bgm_fade_seconds=bgm_fade_seconds,
+                bgm_duck_db=bgm_duck_db,
             )
             try:
                 subprocess.run(command, check=True, capture_output=True, text=True)
@@ -189,16 +235,33 @@ def _build_command(
     bitrate: str,
     width: int,
     height: int,
+    bgm_segments: list[dict[str, Any]] | None = None,
+    bgm_fade_seconds: float = BGM_DEFAULT_FADE_SECONDS,
+    bgm_duck_db: float = BGM_DEFAULT_DUCK_DB,
 ) -> list[str]:
+    bgm_segments = bgm_segments or []
     command = [ffmpeg_bin, "-y", "-hide_banner"]
     for asset in video_assets:
         command.extend(["-i", str(asset)])
     if audio_mix is not None:
         command.extend(["-i", str(audio_mix)])
+    for segment in bgm_segments:
+        # -stream_loop -1: 곡이 구간보다 짧으면 자동 반복 — 구간 길이는 필터의 atrim 이 정확히 끊는다
+        command.extend(["-stream_loop", "-1", "-i", str(segment["path"])])
 
     filters = _video_filters(video_events, video_assets, fps, sample_rate, with_motion, width, height)
     filters.append(_subtitle_filter(ass_path))
-    filters.append(_audio_filter(len(video_assets), audio_mix is not None, sample_rate, total_seconds))
+    filters.extend(
+        _audio_filters(
+            len(video_assets),
+            audio_mix is not None,
+            sample_rate,
+            total_seconds,
+            bgm_segments=bgm_segments,
+            bgm_fade_seconds=bgm_fade_seconds,
+            bgm_duck_db=bgm_duck_db,
+        )
+    )
 
     command.extend(
         [
@@ -343,6 +406,98 @@ def _audio_filter(mix_input_index: int, has_mix: bool, sample_rate: int, total_s
         f"apad,atrim=0:{_fmt_seconds(total_seconds)},"
         f"alimiter=limit=0.95,asetpts=PTS-STARTPTS[aout]"
     )
+
+
+def _audio_filters(
+    mix_input_index: int,
+    has_mix: bool,
+    sample_rate: int,
+    total_seconds: float,
+    *,
+    bgm_segments: list[dict[str, Any]],
+    bgm_fade_seconds: float,
+    bgm_duck_db: float,
+) -> list[str]:
+    """Audio filter chains; without BGM this is exactly the legacy single chain."""
+    if not bgm_segments:
+        return [_audio_filter(mix_input_index, has_mix, sample_rate, total_seconds)]
+
+    filters: list[str] = []
+    labels: list[str] = []
+    first_bgm_input = mix_input_index + (1 if has_mix else 0)
+    for index, segment in enumerate(bgm_segments):
+        duration = segment["end"] - segment["start"]
+        fade = max(0.0, min(float(bgm_fade_seconds), duration / 2))
+        chain = (
+            f"[{first_bgm_input + index}:a]"
+            f"aresample={sample_rate},"  # 샘플레이트가 달라도 ffmpeg 가 리샘플
+            f"aformat=sample_fmts=fltp:channel_layouts=stereo,"
+            f"atrim=0:{_fmt_seconds(duration)},asetpts=PTS-STARTPTS,"
+            f"volume={segment['gain_db']:g}dB"
+        )
+        if fade > 0:
+            # 세그먼트 시작 fade-in / 끝 fade-out — 마지막 세그먼트의 끝은 영상 끝이므로
+            # (to 빈값 = total_seconds 로 클램프) 영상 끝에서도 페이드아웃된다.
+            chain += (
+                f",afade=t=in:st=0:d={_fmt_seconds(fade)}"
+                f",afade=t=out:st={_fmt_seconds(max(0.0, duration - fade))}:d={_fmt_seconds(fade)}"
+            )
+        if segment["start"] > 0:
+            chain += f",adelay={round(segment['start'] * 1000)}:all=1"
+        label = f"bgm{index}"
+        filters.append(f"{chain}[{label}]")
+        labels.append(f"[{label}]")
+    if len(labels) == 1:
+        bgm_all = labels[0]
+    else:
+        # 막별 세그먼트는 서로 겹치지 않으므로 normalize=0 단순 합산으로 이어붙인다.
+        filters.append(f"{''.join(labels)}amix=inputs={len(labels)}:duration=longest:normalize=0[bgmall]")
+        bgm_all = "[bgmall]"
+
+    if has_mix:
+        # Chain order matters: loudnorm runs ONCE on the narration premix, and that
+        # normalized track feeds BOTH the main mix and the sidechain key — running
+        # loudnorm after the duck would re-level the track and undo the ducking.
+        filters.append(
+            f"[{mix_input_index}:a]loudnorm=I=-14:TP=-1.5:LRA=11,"
+            f"aresample={sample_rate},"
+            f"apad,atrim=0:{_fmt_seconds(total_seconds)},asetpts=PTS-STARTPTS,"
+            f"asplit=2[nar][narsc]"
+        )
+        threshold = 10 ** (_DUCK_THRESHOLD_DB / 20)
+        filters.append(
+            f"{bgm_all}[narsc]sidechaincompress="
+            f"threshold={threshold:.6f}:ratio={_duck_ratio(bgm_duck_db):g}:"
+            f"attack={_DUCK_ATTACK_MS}:release={_DUCK_RELEASE_MS}[bgmduck]"
+        )
+        narration = "[nar][bgmduck]"
+    else:
+        # 나레이션이 없으면(--no-audio 등) 덕킹 없이 BGM 만 깐다.
+        filters.append(
+            f"anullsrc=channel_layout=stereo:sample_rate={sample_rate},"
+            f"atrim=0:{_fmt_seconds(total_seconds)},asetpts=PTS-STARTPTS[base]"
+        )
+        narration = f"[base]{bgm_all}"
+    # duration=first: 첫 입력(나레이션/무음 베이스)이 apad+atrim 으로 정확히 영상 길이다.
+    # normalize=0 — amix 의 기본 스케일링이 나레이션을 6dB 깎는 것을 막고 단순 합산,
+    # 클리핑은 기존과 같은 true-peak limiter 가 잡는다.
+    filters.append(
+        f"{narration}amix=inputs=2:duration=first:normalize=0,"
+        f"alimiter=limit=0.95,asetpts=PTS-STARTPTS[aout]"
+    )
+    return filters
+
+
+def _duck_ratio(duck_db: float) -> float:
+    """BGM_DUCK_DB(대략 원하는 감쇠량) → sidechaincompress ratio.
+
+    감쇠량 GR ≈ headroom*(1-1/R) 이므로 R = headroom/(headroom-GR).
+    headroom(스피치가 threshold 위로 올라오는 양)은 약 20 dB — 위 상수 주석 참고.
+    """
+    depth = min(abs(float(duck_db)), _DUCK_HEADROOM_DB - 1.0)
+    if depth <= 0:
+        return 1.0
+    return min(round(_DUCK_HEADROOM_DB / (_DUCK_HEADROOM_DB - depth), 3), 20.0)
 
 
 def _subtitle_filter(ass_path: Path | None) -> str:
@@ -587,6 +742,135 @@ def _premix_audio(
         out.setframerate(sample_rate)
         out.writeframes(buffer)
     return mix_path
+
+
+def load_bgm_config(
+    project_dir: str | Path,
+    *,
+    bgm_file: str | None = None,
+    default_gain_db: float = BGM_DEFAULT_GAIN_DB,
+    base_dir: str | Path | None = None,
+) -> list[dict[str, Any]]:
+    """BGM 설정을 해석한다 — 프로젝트의 BGM.json 이 BGM_FILE 보다 우선.
+
+    Returns [{"path": 절대경로, "from": str|None, "to": str|None, "gain_db": float}, ...]
+    (빈 리스트 = BGM 없음). 상대 경로는 base_dir(보통 CONTI.md 폴더) → 프로젝트 폴더 →
+    프로젝트 상위 폴더 순으로 찾는다.
+    """
+    project_dir = Path(project_dir)
+    bgm_json = project_dir / BGM_JSON_NAME
+    if bgm_json.is_file():
+        entries = _read_bgm_json(bgm_json)
+    elif bgm_file and bgm_file.strip():
+        entries = [{"file": bgm_file.strip(), "from": None, "to": None, "gain_db": None}]
+    else:
+        return []
+
+    resolved: list[dict[str, Any]] = []
+    for index, entry in enumerate(entries, start=1):
+        gain = entry.get("gain_db")
+        try:
+            gain_db = float(gain) if gain not in (None, "") else float(default_gain_db)
+        except (TypeError, ValueError) as exc:
+            raise RuntimeError(
+                f"{bgm_json} 의 {index}번째 곡: gain_db 는 숫자(dB)여야 합니다: {gain!r}"
+            ) from exc
+        resolved.append(
+            {
+                "path": str(_resolve_bgm_file(str(entry["file"]), project_dir, base_dir)),
+                "from": entry.get("from"),
+                "to": entry.get("to"),
+                "gain_db": gain_db,
+            }
+        )
+    return resolved
+
+
+def _read_bgm_json(path: Path) -> list[dict[str, Any]]:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"{path} 를 읽지 못했습니다 (JSON 형식 오류: {exc}). "
+            '예시: [{"file": "music/bgm.mp3", "from": "0:00", "to": "", "gain_db": -16}]'
+        ) from exc
+    if not isinstance(raw, list):
+        raise RuntimeError(
+            f"{path} 은 곡 목록(JSON 배열)이어야 합니다. "
+            '예시: [{"file": "music/bgm.mp3", "from": "0:00", "to": ""}]'
+        )
+    entries: list[dict[str, Any]] = []
+    for index, item in enumerate(raw, start=1):
+        if not isinstance(item, dict) or not str(item.get("file") or "").strip():
+            raise RuntimeError(f'{path} 의 {index}번째 곡에 "file" 항목(음원 경로)이 없습니다.')
+        entries.append(
+            {
+                "file": str(item["file"]).strip(),
+                "from": item.get("from"),
+                "to": item.get("to"),
+                "gain_db": item.get("gain_db"),
+            }
+        )
+    return entries
+
+
+def _resolve_bgm_file(file_value: str, project_dir: Path, base_dir: str | Path | None) -> Path:
+    candidate = Path(file_value).expanduser()
+    if candidate.suffix.lower() not in _BGM_EXTS:
+        raise RuntimeError(
+            f"지원하지 않는 BGM 파일 형식입니다: {file_value} — mp3/wav/m4a 파일을 사용하세요."
+        )
+    if candidate.is_absolute():
+        searched = [candidate]
+    else:
+        bases: list[Path] = []
+        for base in (base_dir, project_dir, Path(project_dir).resolve().parent):
+            base = Path(base).resolve() if base else None
+            if base and base not in bases:
+                bases.append(base)
+        searched = [base / candidate for base in bases]
+    for path in searched:
+        if path.is_file():
+            return path.resolve()
+    tried = "\n".join(f"  - {path}" for path in searched)
+    raise RuntimeError(
+        f"BGM 파일을 찾지 못했습니다: {file_value}\n확인한 위치:\n{tried}\n"
+        "WEFT_SETTINGS.txt 의 BGM_FILE 또는 BGM.json 의 file 경로를 확인하세요 "
+        "(CONTI.md 기준 상대 경로 또는 절대 경로, mp3/wav/m4a)."
+    )
+
+
+def resolve_bgm_segments(bgm: list[dict[str, Any]], total_seconds: float) -> list[dict[str, Any]]:
+    """from/to 타임코드("분:초")를 초 단위 구간으로 바꾸고 영상 길이에 맞춰 자른다."""
+    segments: list[dict[str, Any]] = []
+    total = float(total_seconds)
+    for index, entry in enumerate(bgm, start=1):
+        start = _bgm_time(entry.get("from"), index, "from", default=0.0)
+        end = _bgm_time(entry.get("to"), index, "to", default=total)  # to 빈값 = 영상 끝까지
+        start = max(0.0, start)
+        end = min(end, total)
+        if end - start <= 0.05:
+            raise RuntimeError(
+                f"BGM {index}번째 곡의 구간이 비어 있습니다 "
+                f'(from={entry.get("from")!r}, to={entry.get("to")!r}, 영상 길이 {total:.1f}초). '
+                "BGM.json 의 from/to 값을 확인하세요."
+            )
+        segments.append(
+            {"path": entry["path"], "start": start, "end": end, "gain_db": float(entry["gain_db"])}
+        )
+    return segments
+
+
+def _bgm_time(value: Any, index: int, field: str, *, default: float) -> float:
+    if value in (None, ""):
+        return default
+    try:
+        return float(parse_timecode(str(value)))
+    except ValueError as exc:
+        raise RuntimeError(
+            f'BGM {index}번째 곡의 "{field}" 값이 잘못되었습니다: {value!r} — '
+            '"분:초" 형식으로 적어주세요 (예: "1:30").'
+        ) from exc
 
 
 def _load(path: Path) -> Any:

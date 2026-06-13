@@ -348,6 +348,21 @@ def _img_dims(path: str) -> tuple[int, int]:
         return _FALLBACK_DIMS
 
 
+def _audio_duration_us(path: str) -> int | None:
+    """Audio file duration in microseconds via ffprobe; None when unknown."""
+    try:
+        result = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
+            capture_output=True, text=True, check=True,
+        )
+        seconds = float(result.stdout.strip().splitlines()[0])
+        if seconds > 0:
+            return round(seconds * 1_000_000)
+    except Exception:
+        pass
+    return None
+
+
 # ------------------------------------------------------------------- build ---
 
 def build_capcut_draft(
@@ -360,6 +375,7 @@ def build_capcut_draft(
     images_only: bool = False,
     limit: int | None = None,
     register: bool = True,
+    bgm: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     project_dir = Path(project_dir)
     base = project_dir  # asset paths in render_plan are relative to project_dir
@@ -467,6 +483,40 @@ def build_capcut_draft(
         mats["vocal_separations"].append(vs)
         audio_segments.append(_audio_segment(am["id"], [speed["id"], scm["id"], vs["id"]], start_us, dur_us))
 
+    # BGM: simple placement on its own audio track — one segment per BGM.json
+    # entry (or the single BGM_FILE), base volume from gain_db. Ducking and exact
+    # fades are left to the user inside CapCut; the ffmpeg render does them
+    # automatically. CapCut cannot loop a clip, so a song shorter than its span
+    # is placed once at the span start (capped to the song length).
+    bgm_segments: list[dict] = []
+    if bgm and not images_only:
+        from .ffmpeg_render import resolve_bgm_segments  # lazy: avoids a circular import
+
+        plan_total_seconds = render_plan["total_samples"] / int(render_plan.get("sample_rate", 48_000))
+        for seg in resolve_bgm_segments(bgm, plan_total_seconds):
+            asset = _localize(
+                Path(seg["path"]).resolve(), materials_dir, copy_cache, "bgm_" + os.path.basename(seg["path"])
+            )
+            start_us = round(seg["start"] * 1_000_000)
+            dur_us = round((seg["end"] - seg["start"]) * 1_000_000)
+            source_us = _audio_duration_us(asset)
+            if source_us:
+                dur_us = min(dur_us, source_us)
+            am = _audio_material(asset, dur_us)  # same verified material shape as narration audio
+            mats["audios"].append(am)
+            speed = {"id": _uuid_l(), "curve_speed": None, "mode": 0, "speed": 1.0, "type": "speed"}
+            scm = {"id": _uuid_l(), "audio_channel_mapping": 0, "is_config_open": False, "type": ""}
+            vs = {"id": _uuid_l(), "choice": 0, "enter_from": "", "final_algorithm": "",
+                  "production_path": "", "removed_sounds": [], "time_range": None, "type": "vocal_separation"}
+            mats["speeds"].append(speed)
+            mats["sound_channel_mappings"].append(scm)
+            mats["vocal_separations"].append(vs)
+            segment = _audio_segment(am["id"], [speed["id"], scm["id"], vs["id"]], start_us, dur_us)
+            volume = round(10 ** (float(seg["gain_db"]) / 20), 4)  # dB → CapCut linear volume
+            segment["volume"] = volume
+            segment["last_nonzero_volume"] = volume
+            bgm_segments.append(segment)
+
     total_us = us(render_plan["total_samples"]) if not limit else max(
         [s["target_timerange"]["start"] + s["target_timerange"]["duration"] for s in video_segments] or [0]
     )
@@ -476,6 +526,9 @@ def build_capcut_draft(
     if audio_segments:
         tracks.append({"attribute": 0, "flag": 0, "id": _uuid_u(), "is_default_name": True, "name": "",
                        "type": "audio", "segments": audio_segments})
+    if bgm_segments:
+        tracks.append({"attribute": 0, "flag": 0, "id": _uuid_u(), "is_default_name": True, "name": "",
+                       "type": "audio", "segments": bgm_segments})
     info["tracks"] = tracks
 
     _dump(dest / "draft_info.json", info)
@@ -488,6 +541,7 @@ def build_capcut_draft(
         "folder": str(dest),
         "video_segments": len(video_segments),
         "audio_segments": len(audio_segments),
+        "bgm_segments": len(bgm_segments),
         "photo_materials": len(mats["videos"]),
         "total_seconds": round(total_us / 1_000_000, 2),
         "registered": register,

@@ -14,6 +14,7 @@ from .settings import (
     parse_settings,
     SETTINGS_FILE,
     setting_bool,
+    setting_float,
     setting_int,
     setting_str,
     settings_payload,
@@ -59,18 +60,49 @@ def _capcut_registration(no_register: bool) -> tuple[bool, bool]:
     return (not no_register and not running), running
 
 
-def _seed_cards(conti: str | Path, out_dir: str | Path) -> bool:
-    """CONTI.md 옆의 CARDS.json 을 프로젝트 출력으로 복사한다.
+def _seed_sidecar(conti: str | Path, out_dir: str | Path, name: str) -> bool:
+    """CONTI.md 옆의 사이드카 파일(CARDS.json, BGM.json …)을 프로젝트 출력으로 복사한다.
 
-    텍스트카드 문구를 generated_project 에만 두면 conti 재실행 때 사라지고
-    저장소에 커밋할 수도 없다 — STYLE.txt 처럼 콘티 옆이 정본이다.
+    generated_project 에만 두면 conti 재실행 때 사라지고 저장소에 커밋할 수도
+    없다 — STYLE.txt 처럼 콘티 옆이 정본이다.
     """
-    src = Path(conti).resolve().parent / "CARDS.json"
+    src = Path(conti).resolve().parent / name
     if not src.is_file():
         return False
-    dest = Path(out_dir) / "CARDS.json"
+    dest = Path(out_dir) / name
     dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
     return True
+
+
+def _seed_cards(conti: str | Path, out_dir: str | Path) -> bool:
+    return _seed_sidecar(conti, out_dir, "CARDS.json")
+
+
+def _seed_bgm(conti: str | Path, out_dir: str | Path) -> bool:
+    return _seed_sidecar(conti, out_dir, "BGM.json")
+
+
+def _load_bgm(
+    project_dir: str | Path,
+    settings: dict[str, str],
+    *,
+    scope: str | Path | None = None,
+    disabled: bool = False,
+) -> list[dict] | None:
+    """WEFT_SETTINGS.txt(BGM_FILE)·BGM.json 에서 BGM 설정을 읽는다. 미설정/--no-bgm 이면 None."""
+    if disabled:
+        return None
+    from .exporters.ffmpeg_render import load_bgm_config
+
+    settings_file = find_settings_file(scope or project_dir)
+    gain_db = setting_float(settings, "BGM_GAIN_DB", -16.0)
+    bgm = load_bgm_config(
+        project_dir,
+        bgm_file=setting_str(settings, "BGM_FILE"),
+        default_gain_db=gain_db if gain_db is not None else -16.0,
+        base_dir=settings_file.parent if settings_file else None,
+    )
+    return bgm or None
 
 
 def _skill_paths() -> dict[str, dict[str, str]]:
@@ -146,6 +178,7 @@ def _run(argv: list[str] | None = None) -> int:
     cap_cmd.add_argument("--capcut-root", help="CapCut Projects/com.lveditor.draft path override")
     cap_cmd.add_argument("--no-motion", action="store_true", help="place clips static (no keyframes)")
     cap_cmd.add_argument("--no-audio", action="store_true", help="skip audio track")
+    cap_cmd.add_argument("--no-bgm", action="store_true", help="skip the BGM audio track even if configured")
     cap_cmd.add_argument("--images-only", action="store_true", help="only image shots (skip cards) — smoke test")
     cap_cmd.add_argument("--limit", type=int, help="only the first N video events (smoke test)")
     cap_cmd.add_argument("--no-register", action="store_true", help="do not touch root_meta_info.json")
@@ -168,6 +201,7 @@ def _run(argv: list[str] | None = None) -> int:
     ffmpeg_cmd.add_argument("--no-motion", action="store_true", help="render all stills static")
     ffmpeg_cmd.add_argument("--no-audio", action="store_true", help="skip narration audio")
     ffmpeg_cmd.add_argument("--no-subtitles", action="store_true", help="do not burn subtitles into the mp4")
+    ffmpeg_cmd.add_argument("--no-bgm", action="store_true", help="render without BGM even if configured")
     ffmpeg_cmd.add_argument("--dry-run", action="store_true", help="print the planned ffmpeg command without rendering")
 
     pick_cmd = sub.add_parser("pick", help="Launch the image-candidate picker UI (local browser)")
@@ -194,6 +228,7 @@ def _run(argv: list[str] | None = None) -> int:
     all_cmd.add_argument("--ffmpeg-crf", type=int, default=None, help="libx264 CRF for --ffmpeg")
     all_cmd.add_argument("--ffmpeg-bitrate", default=None, help="VideoToolbox bitrate for --ffmpeg")
     all_cmd.add_argument("--no-subtitles", action="store_true", help="do not burn subtitles when --ffmpeg is used")
+    all_cmd.add_argument("--no-bgm", action="store_true", help="render without BGM even if configured")
     all_cmd.add_argument("--allow-partial", action="store_true", help="tts/images 일부가 실패해도 계속 진행")
 
     settings_cmd = sub.add_parser("settings", help=f"Show or create project {SETTINGS_FILE} settings")
@@ -235,6 +270,8 @@ def _run(argv: list[str] | None = None) -> int:
         result = write_project(project, Path(out_dir), materialize_assets=not args.no_assets)
         if _seed_cards(args.conti, out_dir):
             print("cards=CARDS.json (CONTI.md 옆 파일을 복사)")
+        if _seed_bgm(args.conti, out_dir):
+            print("bgm=BGM.json (CONTI.md 옆 파일을 복사)")
         errors = [item for item in result["violations"] if item["severity"] == "error"]
         print(f"settings={settings_path}")
         print(f"wrote {out_dir}")
@@ -322,6 +359,7 @@ def _run(argv: list[str] | None = None) -> int:
         no_register = args.no_register or setting_bool(settings, "CAPCUT_NO_REGISTER")
         no_motion = args.no_motion or setting_bool(settings, "CAPCUT_NO_MOTION")
         no_audio = args.no_audio or setting_bool(settings, "CAPCUT_NO_AUDIO")
+        bgm = _load_bgm(args.project_dir, settings, disabled=args.no_bgm or no_audio)
         register, running = _capcut_registration(no_register)
         summary = build_capcut_draft(
             args.project_dir,
@@ -332,6 +370,7 @@ def _run(argv: list[str] | None = None) -> int:
             images_only=args.images_only,
             limit=args.limit,
             register=register,
+            bgm=bgm,
         )
         summary["capcut_running"] = running
         summary["folder_name"] = folder
@@ -375,6 +414,9 @@ def _run(argv: list[str] | None = None) -> int:
                 preset=args.preset or setting_str(settings, "FFMPEG_PRESET", "veryfast") or "veryfast",
                 crf=args.crf if args.crf is not None else (setting_int(settings, "FFMPEG_CRF", 20) or 20),
                 bitrate=args.bitrate or setting_str(settings, "FFMPEG_BITRATE", "8M") or "8M",
+                bgm=_load_bgm(args.project_dir, settings, disabled=args.no_bgm),
+                bgm_fade_seconds=setting_float(settings, "BGM_FADE_SECONDS", 2.0),
+                bgm_duck_db=setting_float(settings, "BGM_DUCK_DB", -12.0),
                 dry_run=args.dry_run,
             )
         except RuntimeError as exc:
@@ -416,10 +458,14 @@ def _run(argv: list[str] | None = None) -> int:
         result = write_project(project, Path(out_dir), materialize_assets=True)
         if _seed_cards(args.conti, out_dir):
             print("✓ cards → CARDS.json (CONTI.md 옆 파일을 복사)")
+        if _seed_bgm(args.conti, out_dir):
+            print("✓ bgm → BGM.json (CONTI.md 옆 파일을 복사)")
         errors = [item for item in result["violations"] if item["severity"] == "error"]
         if errors:
             print(f"validation_errors={len(errors)} — 콘티를 고친 뒤 다시 실행하세요.", file=sys.stderr)
             return 1
+        # BGM 설정 오류(파일 없음 등)는 TTS/이미지 과금 전에 바로 알린다.
+        bgm = _load_bgm(out_dir, settings, scope=args.conti, disabled=args.no_bgm)
         print(f"✓ settings → {settings_path}")
         print(f"✓ conti → {out_dir}")
         tts_summary = generate_tts(out_dir)
@@ -467,6 +513,9 @@ def _run(argv: list[str] | None = None) -> int:
                     with_motion=not setting_bool(settings, "FFMPEG_NO_MOTION"),
                     with_audio=not setting_bool(settings, "FFMPEG_NO_AUDIO"),
                     with_subtitles=not (args.no_subtitles or setting_bool(settings, "FFMPEG_NO_SUBTITLES")),
+                    bgm=bgm,
+                    bgm_fade_seconds=setting_float(settings, "BGM_FADE_SECONDS", 2.0),
+                    bgm_duck_db=setting_float(settings, "BGM_DUCK_DB", -12.0),
                 )
             except RuntimeError as exc:
                 print(str(exc), file=sys.stderr)
@@ -480,7 +529,14 @@ def _run(argv: list[str] | None = None) -> int:
             no_motion = setting_bool(settings, "CAPCUT_NO_MOTION")
             no_audio = setting_bool(settings, "CAPCUT_NO_AUDIO")
             register, running = _capcut_registration(no_register)
-            build_capcut_draft(out_dir, folder_name=folder, register=register, with_motion=not no_motion, with_audio=not no_audio)
+            build_capcut_draft(
+                out_dir,
+                folder_name=folder,
+                register=register,
+                with_motion=not no_motion,
+                with_audio=not no_audio,
+                bgm=None if no_audio else bgm,
+            )
             if running and not no_register:
                 print(f"✓ capcut → {folder} (CapCut 실행 중이라 등록 생략)")
             else:

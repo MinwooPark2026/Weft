@@ -16,14 +16,30 @@ DEFAULT_SETTINGS_TEXT = """# WEFT_SETTINGS.txt
 PROJECT_OUT=generated_project
 
 # Images
-# IMAGE_PROVIDER: openai | comfyui | stub (stub = 키 없이 로컬 placeholder)
+# IMAGE_PROVIDER: openai | gemini | comfyui | stub (stub = 키 없이 로컬 placeholder)
 IMAGE_PROVIDER=openai
 IMAGE_CANDIDATES_N=2
 IMAGE_QUALITY=medium
-IMAGE_SIZE=1536x1024
+# 이미지 비율: 16:9 | 9:16 | 1:1 | 3:2 — 어떤 provider 든 저장 시 이 비율로 정확히 맞춘다(센터 크롭)
+IMAGE_ASPECT=16:9
+# IMAGE_SIZE: 보통 비워 둔다(IMAGE_ASPECT 로 자동 결정). openai 요청 크기 강제용.
+#IMAGE_SIZE=
+# OpenAI 모델. 기본 gpt-image-1-mini(최저가).
+# ⚠ OpenAI 종료 일정: gpt-image-1 은 2026-10-23, gpt-image-1-mini/1.5 는 2026-12-01 종료
+#   → 이후에는 gpt-image-2 로 바꿔야 한다 (gpt-image-2 만 네이티브 16:9, 예: 1920x1080).
+#OPENAI_IMAGE_MODEL=gpt-image-1-mini
+# Gemini 모델 (IMAGE_PROVIDER=gemini 일 때). 기본 gemini-3.1-flash-image.
+# 저가형: gemini-2.5-flash-image / 고품질·4K: gemini-3-pro-image. 키는 .env 의 GEMINI_API_KEY.
+#GEMINI_IMAGE_MODEL=gemini-3.1-flash-image
+#GEMINI_IMAGE_SIZE=1K
+# 반복 캐릭터 시트: 프롬프트에 @char 를 쓰면 CHARACTER.png(CONTI.md 옆 또는 generated_project)를
+# 레퍼런스로 보낸다. 다른 경로를 쓰려면 지정:
+#CHARACTER_SHEET=
 # ComfyUI 로컬 생성 (IMAGE_PROVIDER=comfyui 일 때만) — 주석을 풀고 값을 채운다.
 # COMFYUI_WORKFLOW 는 ComfyUI "Save (API Format)" 으로 내보낸 JSON 경로이고,
 # 긍정 프롬프트 자리에 __WEFT_PROMPT__ (선택: 시드 자리에 __WEFT_SEED__) 를 넣는다.
+# 해상도는 워크플로 JSON 이 결정한다 — IMAGE_ASPECT 와 같은 비율로 맞춰 두는 것을 권장
+# (다르면 저장 시 센터 크롭으로 잘려 나간다).
 #COMFYUI_URL=http://127.0.0.1:8188
 #COMFYUI_WORKFLOW=
 #COMFYUI_TIMEOUT=300
@@ -59,6 +75,22 @@ FFMPEG_BITRATE=8M
 FFMPEG_NO_MOTION=false
 FFMPEG_NO_AUDIO=false
 FFMPEG_NO_SUBTITLES=false
+
+# BGM (배경음악) — 비워 두면 BGM 없음(기본). 캡컷 없이 weft ffmpeg 가 BGM 을 깔고
+# 나레이션이 나오는 동안 자동으로 음량을 낮춥니다(사이드체인 덕킹).
+# 음원은 유튜브 오디오 라이브러리처럼 라이선스가 확보된 파일(mp3/wav/m4a)을 직접 준비하세요.
+# 경로는 CONTI.md 기준 상대 경로 또는 절대 경로. 곡이 영상보다 짧으면 자동 반복.
+#BGM_FILE=
+# BGM 기본 음량(dB). 나레이션 대비 배경 수준 권장값 -16
+#BGM_GAIN_DB=-16
+# 나레이션 중 BGM 을 추가로 낮추는 깊이(대략 dB)
+#BGM_DUCK_DB=-12
+# 곡(구간) 시작/끝 페이드 길이(초) — 마지막 곡은 영상 끝에서도 페이드아웃
+#BGM_FADE_SECONDS=2.0
+# 막(구간)별로 다른 곡: CONTI.md 옆에 BGM.json 을 만들면 BGM_FILE 보다 우선합니다.
+# [{"file": "music/op.mp3", "from": "0:00", "to": "1:30", "gain_db": -16},
+#  {"file": "music/ed.mp3",  "from": "1:30", "to": ""}]   ← to 빈값 = 영상 끝까지
+# 한 번만 끄려면: weft ffmpeg --no-bgm (또는 weft all --no-bgm)
 """
 
 TRUE_VALUES = {"1", "true", "yes", "y", "on"}
@@ -167,6 +199,16 @@ def setting_int(settings: dict[str, str], key: str, default: int | None = None) 
         return int(value)
     except ValueError as exc:
         raise RuntimeError(f"{SETTINGS_FILE}: {key} 는 정수여야 합니다: {value!r}") from exc
+
+
+def setting_float(settings: dict[str, str], key: str, default: float | None = None) -> float | None:
+    value = setting_str(settings, key)
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except ValueError as exc:
+        raise RuntimeError(f"{SETTINGS_FILE}: {key} 는 숫자여야 합니다: {value!r}") from exc
 
 
 def setting_bool(settings: dict[str, str], key: str, default: bool = False) -> bool:

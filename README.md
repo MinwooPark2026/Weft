@@ -90,7 +90,7 @@ weft whereisskill
 cd my-video       # CONTI.md가 있는 폴더
 weft conti        # ./CONTI.md -> ./generated_project/ (파싱 + 검증 + 컴파일)
 weft tts          # ./generated_project (Typecast 나레이션; API 비용)
-weft images       # ./generated_project (OpenAI gpt-image-1; API 비용)
+weft images       # ./generated_project (OpenAI/Gemini 이미지; API 비용)
 weft animate      # Remotion/HyperFrame shot spec 생성·렌더된 clip 확인
 weft ffmpeg       # ./generated_project -> EXPORTS/weft_render.mp4 (먼저 볼 MP4)
 weft pick         # 선택: 이미지 후보를 사람이 고름
@@ -169,6 +169,28 @@ weft all
 
 `weft ffmpeg`는 `EXPORTS/render_plan.json`, 선택 이미지, TTS WAV, 컴파일된 자막 이벤트를 바로 `EXPORTS/weft_render.mp4`로 렌더합니다. 자막은 기본으로 영상에 입혀지며(`--no-subtitles`로 비활성화), `--encoder auto`가 macOS의 `h264_videotoolbox`를 우선 시도하고 실패하면 `libx264`로 fallback합니다. 소프트웨어 인코딩 확인용은 `--preset ultrafast`, 더 작은/고화질 출력은 `--crf` 값 조정으로 맞추세요.
 
+### 배경음악(BGM) — 캡컷 불필요, ffmpeg가 자동 덕킹
+
+기본은 **BGM 없음**입니다. 유튜브 오디오 라이브러리처럼 라이선스가 확보된 음원 파일(mp3/wav/m4a, 서사 없는 배경음 권장)을 준비해 `WEFT_SETTINGS.txt`에 지정하면, `weft ffmpeg`가 BGM을 깔고 **나레이션이 나오는 동안 자동으로 BGM을 낮춥니다**(사이드체인 덕킹) — ⏸ 정적 구간과 문장 사이에서는 다시 올라옵니다. CapCut을 거칠 필요가 없습니다.
+
+```env
+BGM_FILE=music/bgm.mp3   # CONTI.md 기준 상대 경로 또는 절대 경로 (전곡 1개, 짧으면 자동 반복)
+#BGM_GAIN_DB=-16         # BGM 기본 음량(dB)
+#BGM_DUCK_DB=-12         # 나레이션 중 추가로 낮추는 깊이(dB)
+#BGM_FADE_SECONDS=2.0    # 곡(구간) 시작/끝 페이드(초)
+```
+
+막(구간)별로 다른 곡을 쓰려면 `CONTI.md` 옆에 `BGM.json`을 만듭니다. `BGM_FILE`보다 우선하고, CARDS.json처럼 `weft conti`/`weft all`이 generated_project로 복사합니다:
+
+```json
+[
+  {"file": "music/opening.mp3", "from": "0:00", "to": "1:30", "gain_db": -16},
+  {"file": "music/ending.mp3",  "from": "1:30", "to": ""}
+]
+```
+
+`to`를 비우면 영상 끝까지이고, 마지막 곡은 영상 끝에서 페이드아웃됩니다. 설정해 두고 한 번만 끄려면 `weft ffmpeg --no-bgm`(또는 `weft all --no-bgm`). `weft capcut` 드래프트에는 BGM이 별도 오디오 트랙으로 단순 배치만 됩니다(덕킹·정밀 페이드는 CapCut에서 직접).
+
 `weft animate`는 `source_kind=remotion` 또는 `source_kind=hyperframe` shot마다 `SHOTS/<shot>/animation/SPEC.md`를 만들고, AI가 렌더해야 할 출력 경로 `SHOTS/<shot>/rendered/clip.mp4`를 검사합니다. 렌더된 MP4는 일반 clip처럼 `weft ffmpeg`, `weft capcut`, `weft fcpxml`에 들어갑니다.
 
 `weft fcpxml`은 같은 `render_plan`에서 편집 가능한 FCPXML을 만듭니다. 이미지/클립/애니메이션 클립은 비디오 레인, TTS는 오디오 레인, 자막은 타이틀 레인으로 들어갑니다.
@@ -176,11 +198,22 @@ weft all
 provider는 `.env`에서 바꿀 수 있습니다:
 
 ```env
-IMAGE_PROVIDER=openai   # openai | comfyui | stub
+IMAGE_PROVIDER=openai   # openai | gemini | comfyui | stub
 TTS_PROVIDER=typecast   # typecast | stub
+
+OPENAI_IMAGE_MODEL=gpt-image-1-mini       # 기본(최저가). 네이티브 16:9가 필요하면 gpt-image-2
+GEMINI_API_KEY=                           # IMAGE_PROVIDER=gemini 일 때 (Google AI Studio 키)
+GEMINI_IMAGE_MODEL=gemini-3.1-flash-image # 기본. 저가형 gemini-2.5-flash-image / 고품질 gemini-3-pro-image
+IMAGE_ASPECT=16:9                         # 16:9 | 9:16 | 1:1 | 3:2
 ```
 
 `stub`은 API 키 없이 로컬 테스트용 PNG/WAV를 만듭니다.
+
+이미지 비율(`IMAGE_ASPECT`, 기본 16:9)은 provider가 어떤 크기를 반환하든 저장 시점에 센터 크롭으로 정확히 맞춰집니다. Gemini와 gpt-image-2는 16:9를 네이티브로 생성하고, gpt-image-1 계열은 1536x1024(3:2)로 요청한 뒤 1536x864로 크롭됩니다.
+
+⚠ OpenAI 이미지 모델 종료 일정: `gpt-image-1`은 2026-10-23, `gpt-image-1-mini`/`gpt-image-1.5`는 2026-12-01 서비스 종료 — 이후에는 `gpt-image-2`로 바꿔야 합니다. 모델/provider를 바꾸면 캐시 키가 달라져 `weft images` 재실행 시 이미지가 재생성(재과금)됩니다.
+
+반복 캐릭터: `CHARACTER.png`를 `CONTI.md` 옆(또는 `generated_project` 안)에 두고 shot 프롬프트에 `@char`를 쓰면, OpenAI(`images.edit`)/Gemini(이미지 입력)에 캐릭터 시트가 레퍼런스로 전달되고 마커는 "the recurring channel character exactly as shown in the reference sheet"로 치환됩니다. 다른 경로는 `CHARACTER_SHEET=`로 지정하세요. 시트가 없거나 미지원 provider(comfyui/stub)면 마커만 제거되고 경고가 한 번 출력됩니다. `weft pick` 화면의 재생성 패널에서도 provider/모델을 골라 shot별로 다시 생성할 수 있습니다.
 
 `comfyui`는 로컬 ComfyUI 서버(`COMFYUI_URL`, 기본 `http://127.0.0.1:8188`)로 이미지를 생성합니다.
 `COMFYUI_WORKFLOW`에는 ComfyUI에서 **Save (API Format)**으로 내보낸 워크플로 JSON 경로를 지정하고,
@@ -347,7 +380,7 @@ A project is a folder containing `CONTI.md`. `cd` into it and run subcommands th
 cd my-video       # folder containing CONTI.md
 weft conti        # ./CONTI.md -> ./generated_project/ (parse + validate + compile)
 weft tts          # ./generated_project (Typecast narration; API cost)
-weft images       # ./generated_project (OpenAI gpt-image-1; API cost)
+weft images       # ./generated_project (OpenAI/Gemini images; API cost)
 weft animate      # prepare/check Remotion/HyperFrame animation shot clips
 weft ffmpeg       # ./generated_project -> EXPORTS/weft_render.mp4 (first review MP4)
 weft pick         # optional: manual image candidate picking
@@ -426,6 +459,28 @@ weft all
 
 `weft ffmpeg` renders `EXPORTS/render_plan.json`, picked images, TTS WAVs, and compiled subtitle events directly into `EXPORTS/weft_render.mp4`. Subtitles are burned in by default (`--no-subtitles` disables them), and `--encoder auto` tries macOS `h264_videotoolbox` first before falling back to `libx264`. Use `--preset ultrafast` for faster software-encoding checks, or adjust `--crf` for size/quality.
 
+### Background music (BGM) — no CapCut needed, ffmpeg auto-ducks
+
+The default is **no BGM**. Prepare a licensed music file yourself (mp3/wav/m4a, e.g. from the YouTube Audio Library; non-narrative background music works best) and point `WEFT_SETTINGS.txt` at it — `weft ffmpeg` lays the BGM under the video and **automatically lowers it while narration plays** (sidechain ducking), letting it rise back during ⏸ pauses and gaps. No CapCut round-trip required.
+
+```env
+BGM_FILE=music/bgm.mp3   # relative to CONTI.md or absolute (one track; loops if shorter)
+#BGM_GAIN_DB=-16         # base BGM level (dB)
+#BGM_DUCK_DB=-12         # extra attenuation while narration plays (dB)
+#BGM_FADE_SECONDS=2.0    # fade in/out per track segment (seconds)
+```
+
+For different songs per act, create `BGM.json` next to `CONTI.md`. It takes priority over `BGM_FILE` and is copied into generated_project by `weft conti`/`weft all` (like CARDS.json):
+
+```json
+[
+  {"file": "music/opening.mp3", "from": "0:00", "to": "1:30", "gain_db": -16},
+  {"file": "music/ending.mp3",  "from": "1:30", "to": ""}
+]
+```
+
+An empty `to` means "until the end of the video", and the last track fades out at the video end. To skip BGM for one run, use `weft ffmpeg --no-bgm` (or `weft all --no-bgm`). The `weft capcut` draft only places the BGM segments on a separate audio track (do ducking/precise fades inside CapCut yourself).
+
 `weft animate` creates `SHOTS/<shot>/animation/SPEC.md` for `source_kind=remotion` and `source_kind=hyperframe` shots, then checks for the expected rendered output `SHOTS/<shot>/rendered/clip.mp4`. Once rendered, these MP4s enter `weft ffmpeg`, `weft capcut`, and `weft fcpxml` like normal clips.
 
 `weft fcpxml` exports the same `render_plan` as an editable FCPXML timeline: images/clips/animation clips on a video lane, TTS on an audio lane, and subtitles on a title lane.
@@ -433,11 +488,22 @@ weft all
 Providers are selectable in `.env`:
 
 ```env
-IMAGE_PROVIDER=openai   # openai | comfyui | stub
+IMAGE_PROVIDER=openai   # openai | gemini | comfyui | stub
 TTS_PROVIDER=typecast   # typecast | stub
+
+OPENAI_IMAGE_MODEL=gpt-image-1-mini       # default (cheapest). Use gpt-image-2 for native 16:9
+GEMINI_API_KEY=                           # for IMAGE_PROVIDER=gemini (Google AI Studio key)
+GEMINI_IMAGE_MODEL=gemini-3.1-flash-image # default. Budget: gemini-2.5-flash-image / hero: gemini-3-pro-image
+IMAGE_ASPECT=16:9                         # 16:9 | 9:16 | 1:1 | 3:2
 ```
 
 `stub` creates local PNG/WAV assets without API keys for tests and offline dry runs.
+
+`IMAGE_ASPECT` (default 16:9) is enforced exactly at save time with a center crop, whatever size a provider returns. Gemini and gpt-image-2 generate 16:9 natively; the gpt-image-1 family is requested at 1536x1024 (3:2) and cropped to 1536x864.
+
+⚠ OpenAI image model shutdowns: `gpt-image-1` retires 2026-10-23, `gpt-image-1-mini`/`gpt-image-1.5` on 2026-12-01 — migrate to `gpt-image-2` after that. Changing the model/provider changes cache keys, so the next `weft images` run regenerates (re-bills) existing shots.
+
+Recurring character: put a `CHARACTER.png` next to `CONTI.md` (or inside `generated_project`) and write `@char` in a shot prompt — the sheet is sent as a reference image (OpenAI `images.edit` / Gemini image input) and the marker becomes "the recurring channel character exactly as shown in the reference sheet". Use `CHARACTER_SHEET=` for a custom path. Without a sheet or on providers without reference support (comfyui/stub), the marker is stripped with a single warning. The `weft pick` UI's regeneration panel also offers per-shot provider/model dropdowns.
 
 `comfyui` generates images on a local ComfyUI server (`COMFYUI_URL`, default `http://127.0.0.1:8188`).
 Point `COMFYUI_WORKFLOW` at a workflow JSON exported from ComfyUI with **Save (API Format)**,
